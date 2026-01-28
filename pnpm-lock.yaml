@@ -18,7 +18,7 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
-  apps/backend:
+  apps/http-server:
     dependencies:
       express:
         specifier: ^5.2.1
@@ -30,19 +30,6 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
-
-  apps/server:
-    dependencies:
-      ws:
-        specifier: ^8.19.0
-        version: 8.19.0
-    devDependencies:
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
 
   apps/web:
     dependencies:
@@ -80,6 +67,19 @@ importers:
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+
+  apps/ws-server:
+    dependencies:
+      ws:
+        specifier: ^8.19.0
+        version: 8.19.0
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
 
   packages/eslint-config:
     devDependencies:
