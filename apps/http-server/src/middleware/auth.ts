@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/config";
 
-export function auth(res: Response, req: Request, next: NextFunction) {
+export function auth(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization;
   if (!token) {
     return res.status(401).json({ msg: "Token not provided" });
