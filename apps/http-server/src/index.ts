@@ -1,68 +1,129 @@
 import express, { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "@repo/backend-config/config";
+import { authSchema, roomSchema } from "@repo/common/zod";
+import prisma from "@repo/db/prisma";
 import { auth } from "./middleware/auth";
-import {JWT_SECRET} from '@repo/backend-config/config'
-import {authSchema} from '@repo/common/zod'
+import slugify from "slugify";
 
 const app = express();
 app.use(express.json());
 
-
-
 app.post("/signup", async (res: Response, req: Request) => {
   const parseData = authSchema.safeParse(req.body);
+
   if (!parseData.success) {
-    return;
+    return res.status(403).json({
+      msg: "Input fields invalid",
+      error: parseData.error,
+    });
   }
 
-  const { email, password } = parseData.data;
+  const { email, password, name } = parseData.data;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.user.create({
-      email,
-      password,
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name: name,
+      },
     });
-  } catch (error) {}
+
+    res.status(200).json({
+      msg: "Signed up Successfully",
+      userId: user.id,
+    });
+  } catch (error) {
+    res.status(403).json({
+      msg: "User Already Exist",
+      error: error,
+    });
+  }
 });
 
 app.post("/signin", async (res: Response, req: Request) => {
   const parseData = authSchema.safeParse(req.body);
+
   if (!parseData.success) {
-    return;
+    return res.status(403).json({
+      msg: "Input fields invalid",
+      error: parseData.error,
+    });
   }
 
-  const { email, password } = parseData.data;
+  const { email, password, name } = parseData.data;
 
   try {
-    const user = await prisma.user.findOne({
+    const user = await prisma.user.findFirst({
       where: {
         email: email,
       },
     });
 
     if (!user) {
-      return;
+      return res.status(403).json({
+        msg: "Invalid inputs",
+      });
     }
 
     const checkPassword = bcrypt.compare(password, user.password);
 
     if (!checkPassword) {
-      return;
+      return res.status(403).json({
+        msg: "Invalid inputs",
+      });
     }
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET as string );
+    const token = jwt.sign(
+      {
+        id: user.id,
+      },
+      JWT_SECRET as string,
+    );
 
-    return token
-
+    res.status(200).json({
+      msg: "Successfully Signed in",
+      token: token,
+    });
   } catch (error) {
-    return
+    res.status(403).json({
+      msg: "Unauthorized",
+      error: error,
+    });
   }
 });
 
-app.post("/room", auth, (res:Response ,req:Request)=>{
-    
-})
+// @ts-ignore
+app.post("/room", auth, async (res: Response, req: Request) => {
+  const parseData = roomSchema.safeParse(req.body);
+  if (!parseData.success) {
+    return res.json({
+      msg: "Incorrect Format",
+    });
+  }
+  const userId = req.userId as string;
+  const name = slugify(parseData.data.name);
+
+  try {
+    const room = await prisma.room.create({
+      data: {
+        slug: name,
+        adminId: userId,
+      },
+    });
+
+    res.json({
+      roomId: room.id,
+    });
+  } catch (error) {
+    res.status(411).json({
+      msg: "Room already Exists",
+    });
+  }
+});
 
 app.listen(3002);
