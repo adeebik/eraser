@@ -15,10 +15,10 @@ wss.on("connection", (ws, request) => {
   const token = queryParams.get('token') || ""
   const decoded = jwt.verify(token , JWT_SECRET as string )
 
-  if (!decoded || !decoded.userId ){
-    ws.close()
-    return
-  }
+  // if (!decoded || !decoded.userId ){
+  //   ws.close()
+  //   return
+  // }
 
 
   ws.on("message", function message(data) {

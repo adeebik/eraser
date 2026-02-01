@@ -1,27 +1,41 @@
 {
   "name": "@repo/db",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "./dist/client.js",
+  "module": "./dist/client.mjs",
+  "types": "./dist/client.d.ts",
   "exports": {
-    "./prisma": "./prisma.ts"
+    ".": {
+      "import": "./dist/client.mjs",
+      "require": "./dist/client.js",
+      "default": "./dist/client.js"
+    }
   },
   "scripts": {
-    "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "db:test": "tsx scripts/test-database.ts"
+    "db:seed": "tsx src/seed.ts",
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "format": "prisma format",
+    "generate": "prisma generate",
+    "lint": "eslint . --max-warnings 0",
+    "prebuild": "npm run generate",
+    "predev": "npm run generate",
+    "studio": "prisma studio"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
     "@types/pg": "^8.16.0",
-    "prisma": "^7.3.0"
+    "prisma": "^7.3.0",
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.2",
+    "tsx": "4.19.1",
+    "typescript": "5.5.4"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",

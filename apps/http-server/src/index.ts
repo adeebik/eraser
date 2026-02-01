@@ -3,14 +3,14 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/config";
 import { authSchema, roomSchema } from "@repo/common/zod";
-import prisma from "@repo/db/prisma";
+import { prisma }  from "@repo/db";
 import { auth } from "./middleware/auth";
 import slugify from "slugify";
 
 const app = express();
 app.use(express.json());
 
-app.post("/signup", async (res: Response, req: Request) => {
+app.post("/signup", async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
   if (!parseData.success) {
@@ -45,7 +45,7 @@ app.post("/signup", async (res: Response, req: Request) => {
   }
 });
 
-app.post("/signin", async (res: Response, req: Request) => {
+app.post("/signin", async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
   if (!parseData.success) {
@@ -98,7 +98,7 @@ app.post("/signin", async (res: Response, req: Request) => {
 });
 
 // @ts-ignore
-app.post("/room", auth, async (res: Response, req: Request) => {
+app.post("/room", auth, async (req: Request, res: Response) => {
   const parseData = roomSchema.safeParse(req.body);
   if (!parseData.success) {
     return res.json({
