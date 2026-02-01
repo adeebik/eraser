@@ -37,11 +37,16 @@ app.post("/signup", async (req: Request, res: Response) => {
       msg: "Signed up Successfully",
       userId: user.id,
     });
-  } catch (error) {
-    res.status(403).json({
-      msg: "User Already Exist",
-      error: error,
-    });
+  } catch (error: any) {
+    if (error.meta.driverAdapterError.cause.kind == "UniqueConstraintViolation") {
+      res.status(411).json({
+        msg: "User already exists",
+      });
+    } else {
+      res.status(403).json({
+        msg: "Unexpected Database Error",
+      });
+    }
   }
 });
 
@@ -54,8 +59,8 @@ app.post("/signin", async (req: Request, res: Response) => {
       error: parseData.error,
     });
   }
-
-  const { email, password, name } = parseData.data;
+  
+  const { email, password  } = parseData.data;
 
   try {
     const user = await prisma.user.findFirst({
@@ -70,14 +75,16 @@ app.post("/signin", async (req: Request, res: Response) => {
       });
     }
 
-    const checkPassword = bcrypt.compare(password, user.password);
-
+    const checkPassword = await bcrypt.compare(password, user.password);
+    
     if (!checkPassword) {
       return res.status(403).json({
         msg: "Invalid inputs",
       });
     }
 
+    console.log("secert" , JWT_SECRET);
+    
     const token = jwt.sign(
       {
         id: user.id,
@@ -85,7 +92,9 @@ app.post("/signin", async (req: Request, res: Response) => {
       JWT_SECRET as string,
     );
 
-    res.status(200).json({
+    console.log("token ", token);
+
+    return res.status(200).json({
       msg: "Successfully Signed in",
       token: token,
     });
@@ -97,7 +106,6 @@ app.post("/signin", async (req: Request, res: Response) => {
   }
 });
 
-// @ts-ignore
 app.post("/room", auth, async (req: Request, res: Response) => {
   const parseData = roomSchema.safeParse(req.body);
   if (!parseData.success) {
@@ -118,6 +126,7 @@ app.post("/room", auth, async (req: Request, res: Response) => {
 
     res.json({
       roomId: room.id,
+      name: room.slug
     });
   } catch (error) {
     res.status(411).json({
