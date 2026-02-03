@@ -42,6 +42,7 @@ wss.on("connection", (ws, request) => {
 
   const url = request.url;
   if (!url) {
+    ws.close(1008, 'missing URL')
     return;
   }
 
@@ -50,6 +51,7 @@ wss.on("connection", (ws, request) => {
 
   const userId = checkUser(token);
   if (!userId) {
+    ws.close(1008, "invalid token")
     return;
   }
 
