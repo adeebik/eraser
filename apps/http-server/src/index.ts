@@ -106,6 +106,7 @@ app.post("/signin", async (req: Request, res: Response) => {
   }
 });
 
+//create room
 app.post("/room", auth, async (req: Request, res: Response) => {
   const parseData = roomSchema.safeParse(req.body);
   if (!parseData.success) {
@@ -145,6 +146,23 @@ app.post("/room", auth, async (req: Request, res: Response) => {
 //delete room
 
 //get chats - limit
+app.get("/chats/:roomId" , async(req:Request ,res:Response)=>{
+  const roomId = req.params.roomId
 
+  const response = await prisma.chat.findMany({
+    where:{
+      roomId: Number(roomId)
+    },
+    orderBy:{
+      id: "desc"
+    },
+    take:100
+  })
+  
+  res.json({
+    response
+  })
+  
+})
 
 app.listen(3002);
