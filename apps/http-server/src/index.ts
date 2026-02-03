@@ -135,4 +135,16 @@ app.post("/room", auth, async (req: Request, res: Response) => {
   }
 });
 
+//get rooms - all users rooms
+//get room details - who is admin, total members , etc
+
+//share room
+//join shared room
+
+//leave room
+//delete room
+
+//get chats - limit
+
+
 app.listen(3002);
