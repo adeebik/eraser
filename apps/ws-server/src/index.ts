@@ -178,21 +178,22 @@ wss.on("connection", (ws, request) => {
 
       if (parsedData.type === "chat") {
         const message = parsedData.payload.message;
+        const roomId = parsedData.payload.roomId;
         const userInfo = users.get(ws);
 
         if (!userInfo || !message) return ws.send("data");
 
-        const { room, name } = userInfo;
+        const { name } = userInfo;
         
-        if (!room) return ws.send("no rooms");
+        if (!roomId) return ws.send("no rooms");
 
-        // await prisma.chat.create({
-        //   data:{
-        //     roomId: parseInt(room) ,
-        //     message,
-        //     userId
-        //   }
-        // })
+        await prisma.chat.create({
+          data:{
+            roomId: Number(roomId) ,
+            message: message.toString(),
+            userId
+          }
+        })
 
         const data = JSON.stringify({
           type: "chat",
@@ -202,7 +203,7 @@ wss.on("connection", (ws, request) => {
           },
         });
 
-        rooms.get(room)?.forEach((member) => {
+        rooms.get(roomId)?.forEach((member) => {
           if (member !== ws) {
             member.send(data);
           }

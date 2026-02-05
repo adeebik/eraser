@@ -6,10 +6,11 @@ import { authSchema, roomSchema } from "@repo/common/zod";
 import { prisma }  from "@repo/db";
 import { auth } from "./middleware/auth";
 import slugify from "slugify";
-
+import cors from "cors"
 const app = express();
 app.use(express.json());
 
+app.use(cors())
 app.post("/signup", async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
