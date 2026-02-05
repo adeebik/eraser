@@ -1,12 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import { initDraw } from "../draw";
 import ToolsBtn from "./ToolsBtn";
 import { Circle, Eraser, Pencil, Square } from "lucide-react";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
-
 
 export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,13 +19,21 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
     if (canvasRef.current) {
       const g = new Game(canvasRef.current, roomId, socket)
       setGame(g)
+
+      return()=> {
+        g.destroy();
+      }
     }
   }, [canvasRef]);
 
-
   return (
     <div>
-      <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}></canvas>
+      <canvas 
+        ref={canvasRef} 
+        width={window.innerWidth} 
+        height={window.innerHeight}>
+      </canvas>
+
       <div className="fixed top-6 left-6">
 
         <div className="iconBox flex flex-col gap-3">
