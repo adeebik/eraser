@@ -10,8 +10,8 @@ export class Game {
   private clicked: boolean;
   private startX: number;
   private startY: number;
-  private width: number;
-  private height: number;
+  private lastX: number;
+  private lastY:number;
   private selectedTool = ShapeType.RECT;
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
@@ -23,12 +23,18 @@ export class Game {
     this.clicked = false;
     this.startX = 0;
     this.startY = 0;
-    this.width = 0;
-    this.height = 0;
+    this.lastX = 0;
+    this.lastY=0;
 
     this.init();
     this.initHandlers();
     this.initMouseHandlers();
+  }
+
+  destroy() {
+    this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
+    this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
+    this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
   }
 
   setShape(tool: ShapeType) {
@@ -69,88 +75,113 @@ export class Game {
     });
   }
 
-  initMouseHandlers() {
-    this.canvas.addEventListener("mousedown", (e) => {
-      this.clicked = true;
-      this.startX = e.clientX;
-      this.startY = e.clientY;
-    });
+  
+  mouseDownHandler = (e: MouseEvent) => {
+    this.clicked = true;
+    this.startX = e.clientX;
+    this.startY = e.clientY;
+    this.lastX = this.startX;
+    this.lastY = this.startY;
 
-    this.canvas.addEventListener("mouseup", (e) => {
-      this.clicked = false;
-      this.width = e.clientX - this.startX;
-      this.height = e.clientY - this.startY;
+        if (this.selectedTool === ShapeType.PENCIL) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.startX, this.startY);
+    }
+  };
 
-      let shape: Shape | null = null;
+  mouseUpHandler = (e: MouseEvent) => {
+    this.clicked = false;
+  
+    const width = e.clientX - this.startX;
+    const height = e.clientY - this.startY;
+
+    let shape: Shape | null = null;
+    if (this.selectedTool === ShapeType.RECT) {
+      shape = {
+        type: this.selectedTool,
+        x: this.startX,
+        y: this.startY,
+        height: height,
+        width: width,
+      };
+    } else if (this.selectedTool === ShapeType.CIRCLE) {
+      shape = {
+        type: ShapeType.CIRCLE,
+        x: this.startX,
+        y: this.startY,
+        height: height,
+        width: width,
+      };
+    } else if (this.selectedTool === ShapeType.PENCIL) {
+      shape = {
+        type: ShapeType.PENCIL,
+        startX: this.startX,
+        startY: this.startY,
+        endX: this.startX,
+        endY: this.startY,
+      };
+    } else if (this.selectedTool === ShapeType.Eraser) {
+      shape = {
+        type: ShapeType.Eraser,
+        startX: this.startX,
+        startY: this.startY,
+        endX: this.startX,
+        endY: this.startY,
+      };
+    }
+
+    if (!shape) {
+      return;
+    }
+
+    this.existingShapes.push(shape);
+
+    this.socket.send(
+      JSON.stringify({
+        type: "chat",
+        payload: {
+          message: JSON.stringify(shape),
+          roomId: this.roomId,
+        },
+      }),
+    );
+  };
+
+  mouseMoveHandler = (e: MouseEvent) => {
+    if (!this.clicked) return
+    
+      const width = e.clientX - this.startX;
+      const height = e.clientY - this.startY;
+
+    //   this.ctx.strokeStyle = "white";
+
       if (this.selectedTool === ShapeType.RECT) {
-        shape = {
-          type: this.selectedTool,
-          x: this.startX,
-          y: this.startY,
-          height: this.height,
-          width: this.width,
-        };
+      this.clearCanvas();
+        this.ctx.strokeRect(this.startX, this.startY, width, height);
       } else if (this.selectedTool === ShapeType.CIRCLE) {
-        shape = {
-          type: ShapeType.CIRCLE,
-          x: this.startX,
-          y: this.startY,
-          height: this.height,
-          width: this.width,
-        };
-      } else if (this.selectedTool === ShapeType.PENCIL) {
-        shape = {
-          type: ShapeType.PENCIL,
-          startX: this.startX,
-          startY: this.startY,
-          endX: this.height,
-          endY: this.width,
-        };
-      } else if (this.selectedTool === ShapeType.Eraser) {
-        shape = {
-          type: ShapeType.Eraser,
-          startX: this.startX,
-          startY: this.startY,
-          endX: this.height,
-          endY: this.width,
-        };
+      this.clearCanvas();
+
+        this.drawCircle(this.startX, this.startY, width, height);
+      }else if (this.selectedTool === ShapeType.PENCIL){
+      this.clearCanvas();
+        this.ctx.globalCompositeOperation="source-over";
+        this.ctx.lineTo(e.clientX,e.clientY);
+        this.ctx.stroke();     
+      } else {
+        this.ctx.globalCompositeOperation="destination-out";
+        this.ctx.beginPath();
+        this.ctx.arc(this.lastX,this.lastY,8,0,Math.PI*2,false);
+        this.ctx.fill();
       }
+      this.lastX=e.clientX
+      this.lastY=e.clientY
+    
+  };
 
-      if (!shape) {
-        return;
-      }
-
-      this.existingShapes.push(shape);
-
-      this.socket.send(
-        JSON.stringify({
-          type: "chat",
-          payload: {
-            message: JSON.stringify(shape),
-            roomId: this.roomId,
-          },
-        }),
-      );
-    });
-
-    this.canvas.addEventListener("mousemove", (e) => {
-      if (this.clicked) {
-        this.width = e.clientX - this.startX;
-        this.height = e.clientY - this.startY;
-        this.clearCanvas();
-        this.ctx.strokeStyle = "white";
-        if (this.selectedTool === ShapeType.RECT) {
-          this.ctx.strokeRect(
-            this.startX,
-            this.startY,
-            this.width,
-            this.height,
-          );
-        } else if (this.selectedTool === ShapeType.CIRCLE) {
-          this.drawCircle(this.startX, this.startY, this.width, this.height);
-        }
-      }
-    });
+  initMouseHandlers() {
+    this.canvas.addEventListener("mousedown", this.mouseDownHandler);
+    this.canvas.addEventListener("mouseup", this.mouseUpHandler);
+    this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
   }
 
   drawCircle(x: number, y: number, width: number, height: number) {
