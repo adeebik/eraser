@@ -19,14 +19,8 @@ export type Shape = {
   height: number;
 } | {
   type: ShapeType.PENCIL;
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
+  path: Array<{x: number; y: number}>;
 } | {
   type: ShapeType.Eraser;
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
+  erasePoints: Array<{x: number; y: number}>;
 }
