@@ -23,17 +23,20 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
       const g = new Game(canvasRef.current, roomId, socket)
       setGame(g)
 
-      // Update zoom level display periodically
-      const interval = setInterval(() => {
-        if (g) {
-          setZoomLevel(g.getZoomLevel())
-          setCanUndo(g.canUndo())
-          setCanRedo(g.canRedo())
-        }
-      }, 100)
+      // Event-based state updates instead of polling
+      const handleStateChange = () => {
+        setZoomLevel(g.getZoomLevel())
+        setCanUndo(g.canUndo())
+        setCanRedo(g.canRedo())
+      }
+
+      // Subscribe to game state changes
+      g.onStateChange(handleStateChange)
+
+      // Initial state
+      handleStateChange()
 
       return () => {
-        clearInterval(interval)
         g.destroy();
       }
     }
@@ -59,18 +62,54 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
     game?.redo()
   }
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - includes tool selection shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
+      // Prevent shortcuts when typing in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
       // Undo: Ctrl+Z (without Shift)
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         handleUndo()
+        return;
       } 
-      // Redo: Ctrl+Shift+Z only
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+      // Redo: Ctrl+Shift+Z or Ctrl+Y
+      else if (
+        ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'y')
+      ) {
         e.preventDefault()
         handleRedo()
+        return;
+      }
+
+      // Tool shortcuts (only if no modifier keys are pressed)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        switch(e.key.toLowerCase()) {
+          case 'v':
+            e.preventDefault()
+            setSelectedTool(ShapeType.SELECT)
+            break;
+          case 'p':
+            e.preventDefault()
+            setSelectedTool(ShapeType.PENCIL)
+            break;
+          case 'c':
+            e.preventDefault()
+            setSelectedTool(ShapeType.CIRCLE)
+            break;
+          case 'r':
+            e.preventDefault()
+            setSelectedTool(ShapeType.RECT)
+            break;
+          case 'e':
+            e.preventDefault()
+            setSelectedTool(ShapeType.Eraser)
+            break;
+        }
       }
     }
 

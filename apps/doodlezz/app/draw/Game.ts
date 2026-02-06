@@ -1,4 +1,3 @@
-
 import { Shape, ShapeType } from "@/types/types";
 import { getExistingShapes } from "./http";
 
@@ -26,10 +25,11 @@ export class Game {
   private minScale: number = 0.1;
   private maxScale: number = 10;
 
-  // Undo/Redo properties
-  private history: Shape[][] = [];
-  private historyStep: number = -1;
+  // Undo/Redo properties - separated for local and collaborative actions
+  private localHistory: Shape[][] = [];
+  private localHistoryStep: number = -1;
   private maxHistorySize: number = 50;
+  private isRemoteUpdate: boolean = false; // Flag to track remote updates
 
   // Selection and drag properties
   private selectedShapeIndex: number | null = null;
@@ -38,9 +38,12 @@ export class Game {
   private dragOffsetY: number = 0;
   private isResizing: boolean = false;
   private isRotating: boolean = false;
-  private resizeHandle: string | null = null; // 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w'
+  private resizeHandle: string | null = null;
   private rotationHandle: boolean = false;
   private initialRotation: number = 0;
+
+  // Event listeners for state changes
+  private stateChangeListeners: (() => void)[] = [];
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -60,11 +63,22 @@ export class Game {
     this.initZoomHandlers();
   }
 
+  // Subscribe to state changes
+  public onStateChange(callback: () => void) {
+    this.stateChangeListeners.push(callback);
+  }
+
+  // Notify all listeners of state change
+  private notifyStateChange() {
+    this.stateChangeListeners.forEach(callback => callback());
+  }
+
   destroy() {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
     this.canvas.removeEventListener("wheel", this.wheelHandler);
+    this.stateChangeListeners = [];
   }
 
   setShape(tool: ShapeType) {
@@ -97,6 +111,7 @@ export class Game {
     this.offsetY = mouseY - canvasY * this.scale;
 
     this.clearCanvas();
+    this.notifyStateChange(); // Notify zoom level changed
   }
 
   // Public methods for zoom controls
@@ -117,50 +132,92 @@ export class Game {
     this.offsetX = 0;
     this.offsetY = 0;
     this.clearCanvas();
+    this.notifyStateChange();
   }
 
   public getZoomLevel(): number {
     return Math.round(this.scale * 100);
   }
 
-  // Undo/Redo methods
+  // Undo/Redo methods - only save local actions
   private saveToHistory() {
+    // Don't save remote updates to local undo/redo history
+    if (this.isRemoteUpdate) {
+      return;
+    }
+
     // Remove any history after current step (when user makes new action after undo)
-    this.history = this.history.slice(0, this.historyStep + 1);
+    this.localHistory = this.localHistory.slice(0, this.localHistoryStep + 1);
     
     // Add current state to history
-    this.history.push([...this.existingShapes]);
+    this.localHistory.push(JSON.parse(JSON.stringify(this.existingShapes)));
     
     // Limit history size
-    if (this.history.length > this.maxHistorySize) {
-      this.history.shift();
+    if (this.localHistory.length > this.maxHistorySize) {
+      this.localHistory.shift();
     } else {
-      this.historyStep++;
+      this.localHistoryStep++;
     }
+
+    this.notifyStateChange(); // Notify history state changed
   }
 
   public undo() {
-    if (this.historyStep > 0) {
-      this.historyStep--;
-      this.existingShapes = [...this.history[this.historyStep]];
+    if (this.localHistoryStep > 0) {
+      this.localHistoryStep--;
+      this.existingShapes = JSON.parse(JSON.stringify(this.localHistory[this.localHistoryStep]));
       this.clearCanvas();
+      this.notifyStateChange();
+      
+      // Broadcast the entire state to sync with other users
+      this.broadcastUndo();
     }
   }
 
   public redo() {
-    if (this.historyStep < this.history.length - 1) {
-      this.historyStep++;
-      this.existingShapes = [...this.history[this.historyStep]];
+    if (this.localHistoryStep < this.localHistory.length - 1) {
+      this.localHistoryStep++;
+      this.existingShapes = JSON.parse(JSON.stringify(this.localHistory[this.localHistoryStep]));
       this.clearCanvas();
+      this.notifyStateChange();
+      
+      // Broadcast the entire state to sync with other users
+      this.broadcastRedo();
     }
   }
 
+  private broadcastUndo() {
+    // Send the current state after undo
+    this.socket.send(
+      JSON.stringify({
+        type: "state_sync",
+        payload: {
+          shapes: JSON.stringify(this.existingShapes),
+          roomId: this.roomId,
+        },
+      }),
+    );
+  }
+
+  private broadcastRedo() {
+    // Send the current state after redo
+    this.socket.send(
+      JSON.stringify({
+        type: "state_sync",
+        payload: {
+          shapes: JSON.stringify(this.existingShapes),
+          roomId: this.roomId,
+        },
+      }),
+    );
+  }
+
   public canUndo(): boolean {
-    return this.historyStep > 0;
+    return this.localHistoryStep > 0;
   }
 
   public canRedo(): boolean {
-    return this.historyStep < this.history.length - 1;
+    return this.localHistoryStep < this.localHistory.length - 1;
   }
 
   // Selection helpers
@@ -231,10 +288,17 @@ export class Game {
       shape.x += deltaX;
       shape.y += deltaY;
     } else if (shape.type === ShapeType.PENCIL && shape.path) {
+      // Update path points
       shape.path = shape.path.map(point => ({
         x: point.x + deltaX,
         y: point.y + deltaY
       }));
+      
+      // Update center if it exists (for rotation)
+      if (shape.centerX !== undefined && shape.centerY !== undefined) {
+        shape.centerX += deltaX;
+        shape.centerY += deltaY;
+      }
     }
   }
 
@@ -249,11 +313,30 @@ export class Game {
       const receivedMsg = JSON.parse(ev.data);
       console.log(receivedMsg);
 
+      // Mark as remote update to prevent adding to local history
+      this.isRemoteUpdate = true;
+
       if (receivedMsg.type === "chat") {
         const parsedShape = JSON.parse(receivedMsg.payload.text);
         this.existingShapes.push(parsedShape);
         this.clearCanvas();
+      } else if (receivedMsg.type === "update") {
+        // Handle shape updates from other users
+        const { shapeIndex, shape } = receivedMsg.payload;
+        const parsedShape = JSON.parse(shape);
+        if (shapeIndex >= 0 && shapeIndex < this.existingShapes.length) {
+          this.existingShapes[shapeIndex] = parsedShape;
+          this.clearCanvas();
+        }
+      } else if (receivedMsg.type === "state_sync") {
+        // Handle full state sync (from undo/redo of other users)
+        const shapes = JSON.parse(receivedMsg.payload.shapes);
+        this.existingShapes = shapes;
+        this.clearCanvas();
       }
+
+      // Reset remote update flag
+      this.isRemoteUpdate = false;
     };
   }
 
@@ -318,6 +401,15 @@ export class Game {
           this.drawSelectionBox(s.x, s.y, s.width, s.height, rotation);
         }
       } else if (s.type === ShapeType.PENCIL && s.path) {
+        // Calculate center if not set
+        if (s.centerX === undefined || s.centerY === undefined) {
+          const bounds = this.getPathBounds(s.path);
+          if (bounds) {
+            s.centerX = bounds.minX + (bounds.maxX - bounds.minX) / 2;
+            s.centerY = bounds.minY + (bounds.maxY - bounds.minY) / 2;
+          }
+        }
+
         if (rotation !== 0 && s.centerX !== undefined && s.centerY !== undefined) {
           this.ctx.save();
           this.ctx.translate(s.centerX, s.centerY);
@@ -335,14 +427,6 @@ export class Game {
           if (bounds) {
             const width = bounds.maxX - bounds.minX;
             const height = bounds.maxY - bounds.minY;
-            const centerX = bounds.minX + width / 2;
-            const centerY = bounds.minY + height / 2;
-            
-            if (s.centerX === undefined) {
-              s.centerX = centerX;
-              s.centerY = centerY;
-            }
-            
             this.drawSelectionBox(bounds.minX, bounds.minY, width, height, rotation);
           }
         }
@@ -608,10 +692,11 @@ export class Game {
     const currentAngle = this.calculateAngle(centerX, centerY, currentX, currentY);
     const newRotation = currentAngle - this.initialRotation;
     
-    if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
-      shape.rotation = newRotation;
-    } else if (shape.type === ShapeType.PENCIL) {
-      shape.rotation = newRotation;
+    // Set rotation for all shape types
+    shape.rotation = newRotation;
+    
+    // For pencil shapes, ensure center is set
+    if (shape.type === ShapeType.PENCIL) {
       shape.centerX = centerX;
       shape.centerY = centerY;
     }
@@ -656,7 +741,7 @@ export class Game {
   }
 
   mouseDownHandler = (e: MouseEvent) => {
-
+    // Middle mouse button or Shift+Click for panning
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
       this.isPanning = true;
       this.panStartX = e.clientX - this.offsetX;
@@ -679,8 +764,12 @@ export class Game {
           
           if (handle === 'rotate') {
             this.isRotating = true;
-            const centerX = bounds.x + bounds.width / 2;
-            const centerY = bounds.y + bounds.height / 2;
+            const centerX = shape.type === ShapeType.PENCIL && shape.centerX !== undefined 
+              ? shape.centerX 
+              : bounds.x + bounds.width / 2;
+            const centerY = shape.type === ShapeType.PENCIL && shape.centerY !== undefined 
+              ? shape.centerY 
+              : bounds.y + bounds.height / 2;
             this.initialRotation = this.calculateAngle(centerX, centerY, coords.x, coords.y) - (shape.rotation || 0);
             this.canvas.style.cursor = "grabbing";
             return;
@@ -829,10 +918,17 @@ export class Game {
         rotation: 0,
       };
     } else if (this.selectedTool === ShapeType.PENCIL) {
+      // Calculate center for pencil shape
+      const bounds = this.getPathBounds(this.currentPath);
+      const centerX = bounds ? bounds.minX + (bounds.maxX - bounds.minX) / 2 : this.startX;
+      const centerY = bounds ? bounds.minY + (bounds.maxY - bounds.minY) / 2 : this.startY;
+      
       shape = {
         type: ShapeType.PENCIL,
         path: this.currentPath,
         rotation: 0,
+        centerX: centerX,
+        centerY: centerY,
       };
     } else if (this.selectedTool === ShapeType.Eraser) {
       shape = {
@@ -878,8 +974,12 @@ export class Game {
       const bounds = this.getShapeBounds(shape);
       
       if (bounds) {
-        const centerX = bounds.x + bounds.width / 2;
-        const centerY = bounds.y + bounds.height / 2;
+        const centerX = shape.type === ShapeType.PENCIL && shape.centerX !== undefined 
+          ? shape.centerX 
+          : bounds.x + bounds.width / 2;
+        const centerY = shape.type === ShapeType.PENCIL && shape.centerY !== undefined 
+          ? shape.centerY 
+          : bounds.y + bounds.height / 2;
         this.rotateShape(this.selectedShapeIndex, centerX, centerY, coords.x, coords.y);
         this.clearCanvas();
       }
