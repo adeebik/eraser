@@ -656,7 +656,7 @@ export class Game {
   }
 
   mouseDownHandler = (e: MouseEvent) => {
-    // Middle mouse button or Space+Click for panning
+
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
       this.isPanning = true;
       this.panStartX = e.clientX - this.offsetX;
