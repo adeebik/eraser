@@ -24,6 +24,10 @@ export class Game {
   private minScale: number = 0.1;
   private maxScale: number = 10;
 
+  private history: Shape[][] = [];
+  private historyStep: number = -1;
+  private maxHistorySize: number = 50;
+
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -102,8 +106,45 @@ export class Game {
     return Math.round(this.scale * 100);
   }
 
+  private saveToHistory() {
+    this.history = this.history.slice(0, this.historyStep + 1);
+
+    this.history.push([...this.existingShapes]);
+
+    if (this.history.length > this.maxHistorySize) {
+      this.history.shift();
+    } else {
+      this.historyStep++;
+    }
+  }
+
+  public undo() {
+    if (this.historyStep > 0) {
+      this.historyStep--;
+      this.existingShapes = [...this.history[this.historyStep]];
+      this.clearCanvas();
+    }
+  }
+
+  public redo() {
+    if (this.historyStep < this.history.length - 1) {
+      this.historyStep++;
+      this.existingShapes = [...this.history[this.historyStep]];
+      this.clearCanvas();
+    }
+  }
+
+  public canUndo(): boolean {
+    return this.historyStep > 0;
+  }
+
+  public canRedo(): boolean {
+    return this.historyStep < this.history.length - 1;
+  }
+
   async init() {
     this.existingShapes = await getExistingShapes(this.roomId);
+    this.saveToHistory();
     this.clearCanvas();
   }
 
@@ -131,16 +172,13 @@ export class Game {
     this.ctx.translate(this.offsetX, this.offsetY);
     this.ctx.scale(this.scale, this.scale);
 
-    // Draw grid for infinite canvas feel
     this.drawGrid();
 
-    // Reset drawing state
     this.ctx.globalCompositeOperation = "source-over";
     this.ctx.strokeStyle = "white";
     this.ctx.fillStyle = "white";
-    this.ctx.lineWidth = 2 / this.scale; // Adjust line width for zoom
+    this.ctx.lineWidth = 2 / this.scale;
 
-    // Draw all non-eraser shapes
     this.existingShapes.forEach((s) => {
       if (s.type === ShapeType.Eraser) return;
 
@@ -168,6 +206,7 @@ export class Game {
       }
     });
 
+    // Restore the state
     this.ctx.restore();
   }
 
@@ -279,6 +318,7 @@ export class Game {
     }
 
     this.existingShapes.push(shape);
+    this.saveToHistory();
 
     this.socket.send(
       JSON.stringify({
