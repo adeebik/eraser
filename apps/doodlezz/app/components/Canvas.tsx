@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ToolsBtn from "./ToolsBtn";
-import { Circle, Eraser, Pencil, Square, ZoomIn, ZoomOut, Maximize2, Undo2, Redo2, MousePointer2 } from "lucide-react";
+import { Circle, Eraser, Pencil, Square, ZoomIn, ZoomOut, Maximize2, Undo2, Redo2, MousePointer2, Trash2 } from "lucide-react";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
 
@@ -62,11 +62,28 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
     game?.redo()
   }
 
+  const handleClearCanvas = () => {
+    if (confirm("Are you sure you want to clear the entire canvas? This action cannot be undone.")) {
+      game?.clearAllShapes()
+    }
+  }
+
+  const handleDeleteSelected = () => {
+    game?.deleteSelected()
+  }
+
   // Keyboard shortcuts - includes tool selection shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in input fields
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Delete key - delete selected shape
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        handleDeleteSelected()
         return;
       }
 
@@ -86,26 +103,26 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         return;
       }
 
-      // Tool shortcuts (only if no modifier keys are pressed)
+      // Tool shortcuts using numbers (only if no modifier keys are pressed)
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        switch(e.key.toLowerCase()) {
-          case 'v':
+        switch(e.key) {
+          case '1':
             e.preventDefault()
             setSelectedTool(ShapeType.SELECT)
             break;
-          case 'p':
+          case '2':
             e.preventDefault()
             setSelectedTool(ShapeType.PENCIL)
             break;
-          case 'c':
+          case '3':
             e.preventDefault()
             setSelectedTool(ShapeType.CIRCLE)
             break;
-          case 'r':
+          case '4':
             e.preventDefault()
             setSelectedTool(ShapeType.RECT)
             break;
-          case 'e':
+          case '5':
             e.preventDefault()
             setSelectedTool(ShapeType.Eraser)
             break;
@@ -134,7 +151,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
               icon={<MousePointer2 size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.SELECT)}}
               selected={(selectedTool === ShapeType.SELECT)}
-              tooltip="Select & Move (V)"
+              tooltip="Select & Move (1)"
             />
 
             <div className="border-t border-zinc-700 my-1"></div>
@@ -143,28 +160,28 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
               icon={<Pencil size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.PENCIL)}}
               selected={(selectedTool === ShapeType.PENCIL)}
-              tooltip="Pencil (P)"
+              tooltip="Pencil (2)"
             />
 
             <ToolsBtn 
               icon={<Circle size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.CIRCLE)}}
               selected={(selectedTool === ShapeType.CIRCLE)}
-              tooltip="Circle (C)"
+              tooltip="Circle (3)"
             />
 
             <ToolsBtn 
               icon={<Square size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.RECT)}}
               selected={(selectedTool === ShapeType.RECT)}
-              tooltip="Rectangle (R)"
+              tooltip="Rectangle (4)"
             />
 
             <ToolsBtn 
               icon={<Eraser size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.Eraser)}}
               selected={(selectedTool === ShapeType.Eraser)}
-              tooltip="Eraser (E)"
+              tooltip="Eraser (5)"
             />
 
             <div className="border-t border-zinc-700 my-2"></div>
@@ -181,6 +198,14 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
               onClick={handleRedo}
               disabled={!canRedo}
               tooltip="Redo (Ctrl+Shift+Z)"
+            />
+
+            <div className="border-t border-zinc-700 my-2"></div>
+
+            <ToolsBtn 
+              icon={<Trash2 size={18}/>} 
+              onClick={handleClearCanvas}
+              tooltip="Clear Canvas"
             />
           </div>
         </div>

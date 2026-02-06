@@ -33,6 +33,7 @@ export class Game {
 
   // Selection and drag properties
   private selectedShapeIndex: number | null = null;
+  private selectedShapeIndices: Set<number> = new Set(); // Multi-selection
   private isDragging: boolean = false;
   private dragOffsetX: number = 0;
   private dragOffsetY: number = 0;
@@ -41,6 +42,9 @@ export class Game {
   private resizeHandle: string | null = null;
   private rotationHandle: boolean = false;
   private initialRotation: number = 0;
+  private selectionStartX: number = 0;
+  private selectionStartY: number = 0;
+  private isSelectionBoxActive: boolean = false;
 
   // Event listeners for state changes
   private stateChangeListeners: (() => void)[] = [];
@@ -220,6 +224,60 @@ export class Game {
     return this.localHistoryStep < this.localHistory.length - 1;
   }
 
+  // Clear all shapes
+  public clearAllShapes() {
+    this.existingShapes = [];
+    this.selectedShapeIndex = null;
+    this.selectedShapeIndices.clear();
+    this.saveToHistory();
+    this.clearCanvas();
+    this.notifyStateChange();
+    
+    // Broadcast clear to other users
+    this.socket.send(
+      JSON.stringify({
+        type: "clear_canvas",
+        payload: {
+          roomId: this.roomId,
+        },
+      }),
+    );
+  }
+
+  // Delete selected shape(s)
+  public deleteSelected() {
+    if (this.selectedShapeIndices.size > 0) {
+      // Delete multiple selected shapes
+      const indicesToDelete = Array.from(this.selectedShapeIndices).sort((a, b) => b - a);
+      indicesToDelete.forEach(index => {
+        this.existingShapes.splice(index, 1);
+      });
+      this.selectedShapeIndices.clear();
+      this.selectedShapeIndex = null;
+    } else if (this.selectedShapeIndex !== null) {
+      // Delete single selected shape
+      this.existingShapes.splice(this.selectedShapeIndex, 1);
+      this.selectedShapeIndex = null;
+    } else {
+      return; // Nothing selected
+    }
+    
+    this.saveToHistory();
+    this.clearCanvas();
+    this.notifyStateChange();
+    
+    // Broadcast deletion to other users
+    this.socket.send(
+      JSON.stringify({
+        type: "state_sync",
+        payload: {
+          shapes: JSON.stringify(this.existingShapes),
+          roomId: this.roomId,
+        },
+      }),
+    );
+  }
+
   // Selection helpers
   private isPointInShape(x: number, y: number, shape: Shape): boolean {
     if (shape.type === ShapeType.RECT) {
@@ -303,6 +361,9 @@ export class Game {
   }
 
   async init() {
+    // Clear any local storage on refresh
+    localStorage.clear();
+    
     this.existingShapes = await getExistingShapes(this.roomId);
     this.saveToHistory(); // Save initial state
     this.clearCanvas();
@@ -332,6 +393,14 @@ export class Game {
         // Handle full state sync (from undo/redo of other users)
         const shapes = JSON.parse(receivedMsg.payload.shapes);
         this.existingShapes = shapes;
+        this.selectedShapeIndex = null;
+        this.selectedShapeIndices.clear();
+        this.clearCanvas();
+      } else if (receivedMsg.type === "clear_canvas") {
+        // Handle clear canvas from other users
+        this.existingShapes = [];
+        this.selectedShapeIndex = null;
+        this.selectedShapeIndices.clear();
         this.clearCanvas();
       }
 
@@ -367,8 +436,10 @@ export class Game {
     this.existingShapes.forEach((s, index) => {
       if (s.type === ShapeType.Eraser) return;
 
-      // Highlight selected shape
-      if (index === this.selectedShapeIndex) {
+      // Highlight selected shapes
+      const isSelected = index === this.selectedShapeIndex || this.selectedShapeIndices.has(index);
+      
+      if (isSelected) {
         this.ctx.strokeStyle = "#3b82f6"; // Blue for selection
         this.ctx.lineWidth = 3 / this.scale;
       } else {
@@ -396,8 +467,8 @@ export class Game {
         
         this.ctx.restore();
         
-        // Draw selection box
-        if (index === this.selectedShapeIndex) {
+        // Draw selection box only for single selection
+        if (index === this.selectedShapeIndex && this.selectedShapeIndices.size === 0) {
           this.drawSelectionBox(s.x, s.y, s.width, s.height, rotation);
         }
       } else if (s.type === ShapeType.PENCIL && s.path) {
@@ -421,8 +492,8 @@ export class Game {
           this.drawPath(s.path);
         }
         
-        // Draw selection highlight for pencil
-        if (index === this.selectedShapeIndex) {
+        // Draw selection highlight for pencil (only for single selection)
+        if (index === this.selectedShapeIndex && this.selectedShapeIndices.size === 0) {
           const bounds = this.getPathBounds(s.path);
           if (bounds) {
             const width = bounds.maxX - bounds.minX;
@@ -432,6 +503,16 @@ export class Game {
         }
       }
     });
+
+    // Draw multi-selection box
+    if (this.selectedShapeIndices.size > 1) {
+      this.drawMultiSelectionBox();
+    }
+
+    // Draw selection box while dragging (for multi-select)
+    if (this.isSelectionBoxActive) {
+      this.drawActiveSelectionBox();
+    }
 
     // Apply erasers
     this.existingShapes.forEach((s) => {
@@ -526,6 +607,50 @@ export class Game {
     this.ctx.strokeStyle = "#3b82f6";
     this.ctx.lineWidth = 2 / this.scale;
     this.ctx.stroke();
+    
+    this.ctx.restore();
+  }
+
+  private drawMultiSelectionBox() {
+    // Calculate bounding box for all selected shapes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    this.selectedShapeIndices.forEach(index => {
+      const shape = this.existingShapes[index];
+      const bounds = this.getShapeBounds(shape);
+      if (bounds) {
+        minX = Math.min(minX, bounds.x);
+        minY = Math.min(minY, bounds.y);
+        maxX = Math.max(maxX, bounds.x + bounds.width);
+        maxY = Math.max(maxY, bounds.y + bounds.height);
+      }
+    });
+
+    if (minX === Infinity) return;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = "#3b82f6";
+    this.ctx.lineWidth = 2 / this.scale;
+    this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
+    
+    const padding = 10 / this.scale;
+    this.ctx.strokeRect(minX - padding, minY - padding, maxX - minX + padding * 2, maxY - minY + padding * 2);
+    
+    this.ctx.restore();
+  }
+
+  private drawActiveSelectionBox() {
+    this.ctx.save();
+    this.ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
+    this.ctx.fillStyle = "rgba(59, 130, 246, 0.1)";
+    this.ctx.lineWidth = 1 / this.scale;
+    this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
+    
+    const width = this.dragOffsetX - this.selectionStartX;
+    const height = this.dragOffsetY - this.selectionStartY;
+    
+    this.ctx.fillRect(this.selectionStartX, this.selectionStartY, width, height);
+    this.ctx.strokeRect(this.selectionStartX, this.selectionStartY, width, height);
     
     this.ctx.restore();
   }
@@ -639,51 +764,119 @@ export class Game {
 
   private resizeShape(shapeIndex: number, handle: string, newX: number, newY: number, startX: number, startY: number) {
     const shape = this.existingShapes[shapeIndex];
-    if (shape.type !== ShapeType.RECT && shape.type !== ShapeType.CIRCLE) return;
+    
+    if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
+      const deltaX = newX - startX;
+      const deltaY = newY - startY;
 
-    const deltaX = newX - startX;
-    const deltaY = newY - startY;
+      const originalX = shape.x;
+      const originalY = shape.y;
+      const originalWidth = shape.width;
+      const originalHeight = shape.height;
 
-    const originalX = shape.x;
-    const originalY = shape.y;
-    const originalWidth = shape.width;
-    const originalHeight = shape.height;
+      switch (handle) {
+        case 'nw':
+          shape.x = originalX + deltaX;
+          shape.y = originalY + deltaY;
+          shape.width = originalWidth - deltaX;
+          shape.height = originalHeight - deltaY;
+          break;
+        case 'ne':
+          shape.y = originalY + deltaY;
+          shape.width = originalWidth + deltaX;
+          shape.height = originalHeight - deltaY;
+          break;
+        case 'sw':
+          shape.x = originalX + deltaX;
+          shape.width = originalWidth - deltaX;
+          shape.height = originalHeight + deltaY;
+          break;
+        case 'se':
+          shape.width = originalWidth + deltaX;
+          shape.height = originalHeight + deltaY;
+          break;
+        case 'n':
+          shape.y = originalY + deltaY;
+          shape.height = originalHeight - deltaY;
+          break;
+        case 's':
+          shape.height = originalHeight + deltaY;
+          break;
+        case 'w':
+          shape.x = originalX + deltaX;
+          shape.width = originalWidth - deltaX;
+          break;
+        case 'e':
+          shape.width = originalWidth + deltaX;
+          break;
+      }
+    } else if (shape.type === ShapeType.PENCIL && shape.path) {
+      // Scale pencil path
+      const bounds = this.getPathBounds(shape.path);
+      if (!bounds) return;
 
-    switch (handle) {
-      case 'nw':
-        shape.x = originalX + deltaX;
-        shape.y = originalY + deltaY;
-        shape.width = originalWidth - deltaX;
-        shape.height = originalHeight - deltaY;
-        break;
-      case 'ne':
-        shape.y = originalY + deltaY;
-        shape.width = originalWidth + deltaX;
-        shape.height = originalHeight - deltaY;
-        break;
-      case 'sw':
-        shape.x = originalX + deltaX;
-        shape.width = originalWidth - deltaX;
-        shape.height = originalHeight + deltaY;
-        break;
-      case 'se':
-        shape.width = originalWidth + deltaX;
-        shape.height = originalHeight + deltaY;
-        break;
-      case 'n':
-        shape.y = originalY + deltaY;
-        shape.height = originalHeight - deltaY;
-        break;
-      case 's':
-        shape.height = originalHeight + deltaY;
-        break;
-      case 'w':
-        shape.x = originalX + deltaX;
-        shape.width = originalWidth - deltaX;
-        break;
-      case 'e':
-        shape.width = originalWidth + deltaX;
-        break;
+      const originalWidth = bounds.maxX - bounds.minX;
+      const originalHeight = bounds.maxY - bounds.minY;
+      
+      if (originalWidth === 0 || originalHeight === 0) return;
+
+      const deltaX = newX - startX;
+      const deltaY = newY - startY;
+
+      let scaleX = 1;
+      let scaleY = 1;
+      let translateX = 0;
+      let translateY = 0;
+
+      switch (handle) {
+        case 'nw':
+          scaleX = (originalWidth - deltaX) / originalWidth;
+          scaleY = (originalHeight - deltaY) / originalHeight;
+          translateX = deltaX;
+          translateY = deltaY;
+          break;
+        case 'ne':
+          scaleX = (originalWidth + deltaX) / originalWidth;
+          scaleY = (originalHeight - deltaY) / originalHeight;
+          translateY = deltaY;
+          break;
+        case 'sw':
+          scaleX = (originalWidth - deltaX) / originalWidth;
+          scaleY = (originalHeight + deltaY) / originalHeight;
+          translateX = deltaX;
+          break;
+        case 'se':
+          scaleX = (originalWidth + deltaX) / originalWidth;
+          scaleY = (originalHeight + deltaY) / originalHeight;
+          break;
+        case 'n':
+          scaleY = (originalHeight - deltaY) / originalHeight;
+          translateY = deltaY;
+          break;
+        case 's':
+          scaleY = (originalHeight + deltaY) / originalHeight;
+          break;
+        case 'w':
+          scaleX = (originalWidth - deltaX) / originalWidth;
+          translateX = deltaX;
+          break;
+        case 'e':
+          scaleX = (originalWidth + deltaX) / originalWidth;
+          break;
+      }
+
+      // Apply scaling and translation to path
+      shape.path = shape.path.map(point => ({
+        x: bounds.minX + (point.x - bounds.minX) * scaleX + translateX,
+        y: bounds.minY + (point.y - bounds.minY) * scaleY + translateY
+      }));
+
+      // Update center
+      const newBounds = this.getPathBounds(shape.path);
+      if (newBounds) {
+        shape.centerX = newBounds.minX + (newBounds.maxX - newBounds.minX) / 2;
+        shape.centerY = newBounds.minY + (newBounds.maxY - newBounds.minY) / 2;
+      }
     }
   }
 
@@ -754,8 +947,8 @@ export class Game {
 
     // Selection mode
     if (this.selectedTool === ShapeType.SELECT) {
-      // Check if clicking on a handle of selected shape
-      if (this.selectedShapeIndex !== null) {
+      // Check if clicking on a handle of selected shape (only for single selection)
+      if (this.selectedShapeIndex !== null && this.selectedShapeIndices.size === 0) {
         const shape = this.existingShapes[this.selectedShapeIndex];
         const bounds = this.getShapeBounds(shape);
         
@@ -784,17 +977,47 @@ export class Game {
         }
       }
       
-      // Not clicking a handle, try to select a shape
+      // Try to select a shape
       const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
       
       if (shapeIndex !== null) {
-        this.selectedShapeIndex = shapeIndex;
+        // Multi-selection with Ctrl/Cmd key
+        if (e.ctrlKey || e.metaKey) {
+          if (this.selectedShapeIndices.has(shapeIndex)) {
+            // Deselect if already selected
+            this.selectedShapeIndices.delete(shapeIndex);
+            if (this.selectedShapeIndex === shapeIndex) {
+              this.selectedShapeIndex = null;
+            }
+          } else {
+            // Add to selection
+            this.selectedShapeIndices.add(shapeIndex);
+            this.selectedShapeIndex = shapeIndex;
+          }
+        } else {
+          // Single selection (clear previous if not in multi-selection)
+          if (!this.selectedShapeIndices.has(shapeIndex)) {
+            this.selectedShapeIndices.clear();
+            this.selectedShapeIndex = shapeIndex;
+          }
+        }
+        
+        // Start dragging for selected shapes
         this.isDragging = true;
         this.dragOffsetX = coords.x;
         this.dragOffsetY = coords.y;
         this.canvas.style.cursor = "move";
       } else {
-        this.selectedShapeIndex = null;
+        // Start selection box if clicking on empty space (without Ctrl)
+        if (!e.ctrlKey && !e.metaKey) {
+          this.selectedShapeIndex = null;
+          this.selectedShapeIndices.clear();
+          this.isSelectionBoxActive = true;
+          this.selectionStartX = coords.x;
+          this.selectionStartY = coords.y;
+          this.dragOffsetX = coords.x;
+          this.dragOffsetY = coords.y;
+        }
       }
       this.clearCanvas();
       return;
@@ -818,6 +1041,43 @@ export class Game {
     if (this.isPanning) {
       this.isPanning = false;
       this.canvas.style.cursor = "default";
+      return;
+    }
+
+    // Handle end of selection box
+    if (this.isSelectionBoxActive) {
+      this.isSelectionBoxActive = false;
+      
+      // Find all shapes within selection box
+      const coords = this.screenToCanvas(e.clientX, e.clientY);
+      const minX = Math.min(this.selectionStartX, coords.x);
+      const maxX = Math.max(this.selectionStartX, coords.x);
+      const minY = Math.min(this.selectionStartY, coords.y);
+      const maxY = Math.max(this.selectionStartY, coords.y);
+      
+      this.selectedShapeIndices.clear();
+      this.existingShapes.forEach((shape, index) => {
+        if (shape.type === ShapeType.Eraser) return;
+        
+        const bounds = this.getShapeBounds(shape);
+        if (bounds) {
+          const shapeCenterX = bounds.x + bounds.width / 2;
+          const shapeCenterY = bounds.y + bounds.height / 2;
+          
+          if (shapeCenterX >= minX && shapeCenterX <= maxX && 
+              shapeCenterY >= minY && shapeCenterY <= maxY) {
+            this.selectedShapeIndices.add(index);
+          }
+        }
+      });
+      
+      if (this.selectedShapeIndices.size === 1) {
+        this.selectedShapeIndex = Array.from(this.selectedShapeIndices)[0];
+      } else if (this.selectedShapeIndices.size > 1) {
+        this.selectedShapeIndex = null;
+      }
+      
+      this.clearCanvas();
       return;
     }
 
@@ -868,22 +1128,20 @@ export class Game {
       return;
     }
 
-    // Handle end of dragging
-    if (this.isDragging && this.selectedShapeIndex !== null) {
+    // Handle end of dragging (single or multi-selection)
+    if (this.isDragging) {
       this.isDragging = false;
       this.canvas.style.cursor = "default";
       
       // Save to history after moving
       this.saveToHistory();
       
-      // Broadcast the updated shape to other users
-      const movedShape = this.existingShapes[this.selectedShapeIndex];
+      // Broadcast the updated state
       this.socket.send(
         JSON.stringify({
-          type: "update",
+          type: "state_sync",
           payload: {
-            shapeIndex: this.selectedShapeIndex,
-            shape: JSON.stringify(movedShape),
+            shapes: JSON.stringify(this.existingShapes),
             roomId: this.roomId,
           },
         }),
@@ -968,6 +1226,14 @@ export class Game {
 
     const coords = this.screenToCanvas(e.clientX, e.clientY);
 
+    // Handle selection box drawing
+    if (this.isSelectionBoxActive) {
+      this.dragOffsetX = coords.x;
+      this.dragOffsetY = coords.y;
+      this.clearCanvas();
+      return;
+    }
+
     // Handle rotating
     if (this.isRotating && this.selectedShapeIndex !== null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
@@ -995,12 +1261,19 @@ export class Game {
       return;
     }
 
-    // Handle dragging selected shape
-    if (this.isDragging && this.selectedShapeIndex !== null) {
+    // Handle dragging selected shape(s)
+    if (this.isDragging) {
       const deltaX = coords.x - this.dragOffsetX;
       const deltaY = coords.y - this.dragOffsetY;
       
-      this.moveShape(this.selectedShapeIndex, deltaX, deltaY);
+      // Move all selected shapes
+      if (this.selectedShapeIndices.size > 0) {
+        this.selectedShapeIndices.forEach(index => {
+          this.moveShape(index, deltaX, deltaY);
+        });
+      } else if (this.selectedShapeIndex !== null) {
+        this.moveShape(this.selectedShapeIndex, deltaX, deltaY);
+      }
       
       this.dragOffsetX = coords.x;
       this.dragOffsetY = coords.y;
@@ -1011,7 +1284,7 @@ export class Game {
 
     // Update cursor in selection mode
     if (this.selectedTool === ShapeType.SELECT && !this.clicked) {
-      if (this.selectedShapeIndex !== null) {
+      if (this.selectedShapeIndex !== null && this.selectedShapeIndices.size === 0) {
         const shape = this.existingShapes[this.selectedShapeIndex];
         const bounds = this.getShapeBounds(shape);
         
