@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ToolsBtn from "./ToolsBtn";
-import { Circle, Eraser, Pencil, Square, ZoomIn, ZoomOut, Maximize2, Undo2, Redo2 } from "lucide-react";
+import { Circle, Eraser, Pencil, Square, ZoomIn, ZoomOut, Maximize2, Undo2, Redo2, MousePointer2 } from "lucide-react";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
 
@@ -23,6 +23,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
       const g = new Game(canvasRef.current, roomId, socket)
       setGame(g)
 
+      // Update zoom level display periodically
       const interval = setInterval(() => {
         if (g) {
           setZoomLevel(g.getZoomLevel())
@@ -58,14 +59,15 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
     game?.redo()
   }
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
-
+      // Undo: Ctrl+Z (without Shift)
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         handleUndo()
       } 
-
+      // Redo: Ctrl+Shift+Z only
       else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault()
         handleRedo()
@@ -84,9 +86,20 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         height={window.innerHeight}>
       </canvas>
 
+      {/* Drawing Tools */}
       <div className="fixed top-6 left-6">
         <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
+          <div className="text-zinc-400 text-xs font-medium mb-3 px-1">Drawing Tools</div>
           <div className="flex flex-col gap-2">
+            <ToolsBtn 
+              icon={<MousePointer2 size={18}/>} 
+              onClick={() => {setSelectedTool(ShapeType.SELECT)}}
+              selected={(selectedTool === ShapeType.SELECT)}
+              tooltip="Select & Move (V)"
+            />
+
+            <div className="border-t border-zinc-700 my-1"></div>
+
             <ToolsBtn 
               icon={<Pencil size={18}/>} 
               onClick={() => {setSelectedTool(ShapeType.PENCIL)}}
@@ -134,6 +147,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         </div>
       </div>
 
+      {/* Zoom Controls */}
       <div className="fixed bottom-6 right-6">
         <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
           <div className="text-white text-sm font-semibold text-center mb-3">
@@ -162,6 +176,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         </div>
       </div>
 
+    
     </div>
   );
 }
