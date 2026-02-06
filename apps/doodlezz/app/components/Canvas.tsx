@@ -23,7 +23,6 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
       const g = new Game(canvasRef.current, roomId, socket)
       setGame(g)
 
-      // Update zoom level display periodically
       const interval = setInterval(() => {
         if (g) {
           setZoomLevel(g.getZoomLevel())
@@ -59,15 +58,14 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
     game?.redo()
   }
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
-      // Undo: Ctrl+Z (without Shift)
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         handleUndo()
       } 
-      // Redo: Ctrl+Shift+Z only
+
       else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault()
         handleRedo()
@@ -86,7 +84,6 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         height={window.innerHeight}>
       </canvas>
 
-      {/* Drawing Tools */}
       <div className="fixed top-6 left-6">
         <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
           <div className="flex flex-col gap-2">
@@ -137,7 +134,6 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         </div>
       </div>
 
-      {/* Zoom Controls */}
       <div className="fixed bottom-6 right-6">
         <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
           <div className="text-white text-sm font-semibold text-center mb-3">
@@ -166,36 +162,6 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  
         </div>
       </div>
 
-      {/* Instructions */}
-      <div className="fixed top-6 right-6 bg-gray-900/90 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-zinc-700 max-w-xs">
-        <div className="font-semibold mb-3 text-sm">Keyboard Shortcuts</div>
-        <div className="space-y-2 text-xs text-zinc-300">
-          <div className="flex justify-between">
-            <span>Scroll Vertically</span>
-            <span className="text-zinc-400">Mouse Wheel</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Scroll Horizontally</span>
-            <span className="text-zinc-400">Shift + Wheel</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Zoom In/Out</span>
-            <span className="text-zinc-400">Ctrl + Wheel</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Pan Canvas</span>
-            <span className="text-zinc-400">Shift + Drag</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Undo</span>
-            <span className="text-zinc-400">Ctrl + Z</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Redo</span>
-            <span className="text-zinc-400">Ctrl + Shift + Z</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
