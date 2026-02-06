@@ -13,8 +13,9 @@ export class Game {
   private lastX: number;
   private lastY: number;
   private selectedTool = ShapeType.RECT;
-  private currentPath: { x: number; y: number }[] = [];
+  private currentPath: {x: number, y: number}[] = [];
 
+  // Zoom and Pan properties
   private scale: number = 1;
   private offsetX: number = 0;
   private offsetY: number = 0;
@@ -24,6 +25,7 @@ export class Game {
   private minScale: number = 0.1;
   private maxScale: number = 10;
 
+  // Undo/Redo properties
   private history: Shape[][] = [];
   private historyStep: number = -1;
   private maxHistorySize: number = 50;
@@ -57,32 +59,35 @@ export class Game {
     this.selectedTool = tool;
   }
 
-  private screenToCanvas(
-    screenX: number,
-    screenY: number,
-  ): { x: number; y: number } {
+  // Convert screen coordinates to canvas coordinates (accounting for zoom and pan)
+  private screenToCanvas(screenX: number, screenY: number): {x: number, y: number} {
     const rect = this.canvas.getBoundingClientRect();
     const x = (screenX - rect.left - this.offsetX) / this.scale;
     const y = (screenY - rect.top - this.offsetY) / this.scale;
     return { x, y };
   }
 
+  // Zoom to a specific point
   private zoomAtPoint(newScale: number, screenX: number, screenY: number) {
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = screenX - rect.left;
     const mouseY = screenY - rect.top;
 
+    // Calculate the canvas position before zoom
     const canvasX = (mouseX - this.offsetX) / this.scale;
     const canvasY = (mouseY - this.offsetY) / this.scale;
 
+    // Update scale
     this.scale = Math.max(this.minScale, Math.min(this.maxScale, newScale));
 
+    // Adjust offset to keep the same point under the mouse
     this.offsetX = mouseX - canvasX * this.scale;
     this.offsetY = mouseY - canvasY * this.scale;
 
     this.clearCanvas();
   }
 
+  // Public methods for zoom controls
   public zoomIn() {
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
@@ -106,11 +111,15 @@ export class Game {
     return Math.round(this.scale * 100);
   }
 
+  // Undo/Redo methods
   private saveToHistory() {
+    // Remove any history after current step (when user makes new action after undo)
     this.history = this.history.slice(0, this.historyStep + 1);
-
+    
+    // Add current state to history
     this.history.push([...this.existingShapes]);
-
+    
+    // Limit history size
     if (this.history.length > this.maxHistorySize) {
       this.history.shift();
     } else {
@@ -144,7 +153,7 @@ export class Game {
 
   async init() {
     this.existingShapes = await getExistingShapes(this.roomId);
-    this.saveToHistory();
+    this.saveToHistory(); // Save initial state
     this.clearCanvas();
   }
 
@@ -162,23 +171,29 @@ export class Game {
   }
 
   clearCanvas() {
+    // Save the current state
     this.ctx.save();
 
+    // Clear the entire canvas
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Apply zoom and pan transformations
     this.ctx.translate(this.offsetX, this.offsetY);
     this.ctx.scale(this.scale, this.scale);
 
+    // Draw grid for infinite canvas feel
     this.drawGrid();
 
+    // Reset drawing state
     this.ctx.globalCompositeOperation = "source-over";
     this.ctx.strokeStyle = "white";
     this.ctx.fillStyle = "white";
-    this.ctx.lineWidth = 2 / this.scale;
-
+    this.ctx.lineWidth = 2 / this.scale; // Adjust line width for zoom
+    
+    // Draw all non-eraser shapes
     this.existingShapes.forEach((s) => {
       if (s.type === ShapeType.Eraser) return;
 
@@ -191,17 +206,18 @@ export class Game {
       }
     });
 
+    // Apply erasers
     this.existingShapes.forEach((s) => {
       if (s.type === ShapeType.Eraser && s.erasePoints) {
         this.ctx.globalCompositeOperation = "destination-out";
         this.ctx.fillStyle = "white";
-
-        s.erasePoints.forEach((point) => {
+        
+        s.erasePoints.forEach(point => {
           this.ctx.beginPath();
           this.ctx.arc(point.x, point.y, 8 / this.scale, 0, Math.PI * 2);
           this.ctx.fill();
         });
-
+        
         this.ctx.globalCompositeOperation = "source-over";
       }
     });
@@ -214,12 +230,13 @@ export class Game {
     const gridSize = 50;
     const startX = Math.floor(-this.offsetX / this.scale / gridSize) * gridSize;
     const startY = Math.floor(-this.offsetY / this.scale / gridSize) * gridSize;
-    const endX = startX + this.canvas.width / this.scale + gridSize;
-    const endY = startY + this.canvas.height / this.scale + gridSize;
+    const endX = startX + (this.canvas.width / this.scale) + gridSize;
+    const endY = startY + (this.canvas.height / this.scale) + gridSize;
 
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     this.ctx.lineWidth = 1 / this.scale;
 
+    // Vertical lines
     for (let x = startX; x < endX; x += gridSize) {
       this.ctx.beginPath();
       this.ctx.moveTo(x, startY);
@@ -227,6 +244,7 @@ export class Game {
       this.ctx.stroke();
     }
 
+    // Horizontal lines
     for (let y = startY; y < endY; y += gridSize) {
       this.ctx.beginPath();
       this.ctx.moveTo(startX, y);
@@ -235,9 +253,9 @@ export class Game {
     }
   }
 
-  private drawPath(path: { x: number; y: number }[]) {
+  private drawPath(path: {x: number, y: number}[]) {
     if (path.length < 2) return;
-
+    
     this.ctx.beginPath();
     this.ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
@@ -247,6 +265,7 @@ export class Game {
   }
 
   mouseDownHandler = (e: MouseEvent) => {
+    // Middle mouse button or Space+Click for panning
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
       this.isPanning = true;
       this.panStartX = e.clientX - this.offsetX;
@@ -263,9 +282,9 @@ export class Game {
     this.lastY = this.startY;
 
     if (this.selectedTool === ShapeType.PENCIL) {
-      this.currentPath = [{ x: this.startX, y: this.startY }];
+      this.currentPath = [{x: this.startX, y: this.startY}];
     } else if (this.selectedTool === ShapeType.Eraser) {
-      this.currentPath = [{ x: this.startX, y: this.startY }];
+      this.currentPath = [{x: this.startX, y: this.startY}];
     }
   };
 
@@ -318,7 +337,7 @@ export class Game {
     }
 
     this.existingShapes.push(shape);
-    this.saveToHistory();
+    this.saveToHistory(); // Save state after adding shape
 
     this.socket.send(
       JSON.stringify({
@@ -366,7 +385,7 @@ export class Game {
       this.drawCircle(this.startX, this.startY, width, height);
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.PENCIL) {
-      this.currentPath.push({ x: coords.x, y: coords.y });
+      this.currentPath.push({x: coords.x, y: coords.y});
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
@@ -381,7 +400,7 @@ export class Game {
       this.ctx.stroke();
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.Eraser) {
-      this.currentPath.push({ x: coords.x, y: coords.y });
+      this.currentPath.push({x: coords.x, y: coords.y});
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
@@ -398,18 +417,30 @@ export class Game {
 
   wheelHandler = (e: WheelEvent) => {
     e.preventDefault();
-
-    const zoomIntensity = 0.1;
-    const delta = e.deltaY > 0 ? -zoomIntensity : zoomIntensity;
-    const newScale = this.scale * (1 + delta);
-
-    this.zoomAtPoint(newScale, e.clientX, e.clientY);
+    
+    // Ctrl + Wheel = Zoom
+    if (e.ctrlKey || e.metaKey) {
+      const zoomIntensity = 0.1;
+      const delta = e.deltaY > 0 ? -zoomIntensity : zoomIntensity;
+      const newScale = this.scale * (1 + delta);
+      this.zoomAtPoint(newScale, e.clientX, e.clientY);
+    }
+    // Shift + Wheel = Horizontal scroll
+    else if (e.shiftKey) {
+      const scrollSpeed = 1;
+      this.offsetX -= e.deltaY * scrollSpeed;
+      this.clearCanvas();
+    }
+    // Normal Wheel = Vertical scroll
+    else {
+      const scrollSpeed = 1;
+      this.offsetY -= e.deltaY * scrollSpeed;
+      this.clearCanvas();
+    }
   };
 
   initZoomHandlers() {
-    this.canvas.addEventListener("wheel", this.wheelHandler, {
-      passive: false,
-    });
+    this.canvas.addEventListener("wheel", this.wheelHandler, { passive: false });
   }
 
   initMouseHandlers() {
