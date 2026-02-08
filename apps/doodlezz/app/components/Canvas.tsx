@@ -1,246 +1,231 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import ToolsBtn from "./ToolsBtn";
-import { Circle, Eraser, Pencil, Square, ZoomIn, ZoomOut, Maximize2, Undo2, Redo2, MousePointer2, Trash2 } from "lucide-react";
+import ToolsPanel from "./ToolsPanel";
+import BottomStylePanel from "./BottomStylePanel";
+import ZoomControls from "./ZoomControls";
+import TopToolbar from "./TopToolbar";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
 
-export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket  }) {
+export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [game, setGame] = useState<Game>()
-  const [selectedTool, setSelectedTool] = useState<ShapeType>(ShapeType.RECT)
-  const [zoomLevel, setZoomLevel] = useState(100)
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
+  const [game, setGame] = useState<Game>();
+  const [selectedTool, setSelectedTool] = useState<ShapeType>(ShapeType.PENCIL);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  
+  // Style states
+  const [strokeColor, setStrokeColor] = useState("#ffffff");
+  const [strokeWidth, setStrokeWidth] = useState(2);
+  const [backgroundColor, setBackgroundColor] = useState("transparent");
+  const [fillStyle, setFillStyle] = useState<"none" | "solid" | "hatch" | "dots">("none");
   
   useEffect(() => {
-    game?.setShape(selectedTool)
-  }, [selectedTool, game])
+    game?.setShape(selectedTool);
+  }, [selectedTool, game]);
+
+  useEffect(() => {
+    if (game) {
+      game.setStrokeColor(strokeColor);
+      game.setStrokeWidth(strokeWidth);
+      game.setBackgroundColor(backgroundColor);
+      game.setFillStyle(fillStyle);
+      
+      // Update selected shape's style if one is selected
+      game.updateSelectedShapeStyle({
+        strokeColor,
+        strokeWidth,
+        backgroundColor,
+        fillStyle,
+      });
+    }
+  }, [strokeColor, strokeWidth, backgroundColor, fillStyle, game]);
 
   useEffect(() => {
     if (canvasRef.current) {
-      const g = new Game(canvasRef.current, roomId, socket)
-      setGame(g)
-
-      // Event-based state updates instead of polling
+      const g = new Game(canvasRef.current, roomId, socket);
+      
       const handleStateChange = () => {
-        setZoomLevel(g.getZoomLevel())
-        setCanUndo(g.canUndo())
-        setCanRedo(g.canRedo())
-      }
+        setZoomLevel(g.getZoomLevel());
+        setCanUndo(g.canUndo());
+        setCanRedo(g.canRedo());
+        
+        // Update style controls when a shape is selected
+        const selectedStyle = g.getSelectedShapeStyle();
+        if (selectedStyle) {
+          setStrokeColor(selectedStyle.strokeColor);
+          setStrokeWidth(selectedStyle.strokeWidth);
+          setBackgroundColor(selectedStyle.backgroundColor);
+          setFillStyle(selectedStyle.fillStyle);
+        }
+      };
 
-      // Subscribe to game state changes
-      g.onStateChange(handleStateChange)
+      const handleResize = () => {
+        if (canvasRef.current) {
+          canvasRef.current.width = window.innerWidth;
+          canvasRef.current.height = window.innerHeight;
+          g.clearCanvas();
+        }
+      };
 
-      // Initial state
-      handleStateChange()
+      window.addEventListener('resize', handleResize);
+      g.onStateChange(handleStateChange);
+      
+      g.init().then(() => {
+        setGame(g);
+        handleStateChange();
+      });
 
       return () => {
+        window.removeEventListener('resize', handleResize);
         g.destroy();
-      }
+      };
     }
   }, [canvasRef, roomId, socket]);
 
-  const handleZoomIn = () => {
-    game?.zoomIn()
-  }
-
-  const handleZoomOut = () => {
-    game?.zoomOut()
-  }
-
-  const handleResetZoom = () => {
-    game?.resetZoom()
-  }
-
-  const handleUndo = () => {
-    game?.undo()
-  }
-
-  const handleRedo = () => {
-    game?.redo()
-  }
-
+  const handleZoomIn = () => game?.zoomIn();
+  const handleZoomOut = () => game?.zoomOut();
+  const handleResetZoom = () => game?.resetZoom();
+  const handleUndo = () => game?.undo();
+  const handleRedo = () => game?.redo();
+  
   const handleClearCanvas = () => {
-    if (confirm("Are you sure you want to clear the entire canvas? This action cannot be undone.")) {
-      game?.clearAllShapes()
+    if (confirm("Clear entire canvas? This cannot be undone.")) {
+      game?.clearAllShapes();
     }
-  }
+  };
 
-  const handleDeleteSelected = () => {
-    game?.deleteSelected()
-  }
+  const handleDeleteSelected = () => game?.deleteSelected();
+  const handleDuplicate = () => game?.duplicateSelected();
 
-  // Keyboard shortcuts - includes tool selection shortcuts
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
-      // Prevent shortcuts when typing in input fields
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      // Delete key - delete selected shape
+      // Delete
       if ((e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault()
-        handleDeleteSelected()
+        e.preventDefault();
+        handleDeleteSelected();
         return;
       }
 
-      // Undo: Ctrl+Z (without Shift)
+      // Undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        handleUndo()
+        e.preventDefault();
+        handleUndo();
         return;
       } 
-      // Redo: Ctrl+Shift+Z or Ctrl+Y
-      else if (
-        ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) ||
-        ((e.ctrlKey || e.metaKey) && e.key === 'y')
-      ) {
-        e.preventDefault()
-        handleRedo()
+      
+      // Redo
+      if (((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
         return;
       }
 
-      // Tool shortcuts using numbers (only if no modifier keys are pressed)
+      // Duplicate
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        handleDuplicate();
+        return;
+      }
+
+      // Tool shortcuts
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         switch(e.key) {
+          case 'v':
           case '1':
-            e.preventDefault()
-            setSelectedTool(ShapeType.SELECT)
+            e.preventDefault();
+            setSelectedTool(ShapeType.SELECT);
             break;
+          case 'p':
           case '2':
-            e.preventDefault()
-            setSelectedTool(ShapeType.PENCIL)
+            e.preventDefault();
+            setSelectedTool(ShapeType.PENCIL);
             break;
+          case 'o':
           case '3':
-            e.preventDefault()
-            setSelectedTool(ShapeType.CIRCLE)
+            e.preventDefault();
+            setSelectedTool(ShapeType.CIRCLE);
             break;
+          case 'r':
           case '4':
-            e.preventDefault()
-            setSelectedTool(ShapeType.RECT)
+            e.preventDefault();
+            setSelectedTool(ShapeType.RECT);
             break;
+          case 'e':
           case '5':
-            e.preventDefault()
-            setSelectedTool(ShapeType.Eraser)
+            e.preventDefault();
+            setSelectedTool(ShapeType.Eraser);
             break;
         }
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyboard)
-    return () => window.removeEventListener('keydown', handleKeyboard)
-  }, [game])
+    window.addEventListener('keydown', handleKeyboard);
+    return () => window.removeEventListener('keydown', handleKeyboard);
+  }, [game]);
+
+  // if (!game) {
+  //   return (
+  //     <div className="flex items-center justify-center h-screen bg-black">
+  //       <div className="text-center">
+  //         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+  //         <p className="text-white text-lg">Loading canvas...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div>
+    <div className="relative w-screen h-screen overflow-hidden bg-black">
       <canvas 
         ref={canvasRef} 
         width={window.innerWidth} 
-        height={window.innerHeight}>
-      </canvas>
+        height={window.innerHeight}
+        className="absolute inset-0"
+      />
 
-      {/* Drawing Tools */}
-      <div className="fixed top-6 left-6">
-        <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
-          <div className="text-zinc-400 text-xs font-medium mb-3 px-1">Drawing Tools</div>
-          <div className="flex flex-col gap-2">
-            <ToolsBtn 
-              icon={<MousePointer2 size={18}/>} 
-              onClick={() => {setSelectedTool(ShapeType.SELECT)}}
-              selected={(selectedTool === ShapeType.SELECT)}
-              tooltip="Select & Move (1)"
-            />
+      {/* Top Toolbar */}
+      <TopToolbar
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onClear={handleClearCanvas}
+      />
 
-            <div className="border-t border-zinc-700 my-1"></div>
+      {/* Left Tools Panel */}
+      <ToolsPanel
+        selectedTool={selectedTool}
+        onToolChange={setSelectedTool}
+      />
 
-            <ToolsBtn 
-              icon={<Pencil size={18}/>} 
-              onClick={() => {setSelectedTool(ShapeType.PENCIL)}}
-              selected={(selectedTool === ShapeType.PENCIL)}
-              tooltip="Pencil (2)"
-            />
+      {/* Bottom Style Panel */}
+      <BottomStylePanel
+        strokeColor={strokeColor}
+        strokeWidth={strokeWidth}
+        backgroundColor={backgroundColor}
+        fillStyle={fillStyle}
+        onStrokeColorChange={setStrokeColor}
+        onStrokeWidthChange={setStrokeWidth}
+        onBackgroundColorChange={setBackgroundColor}
+        onFillStyleChange={setFillStyle}
+      />
 
-            <ToolsBtn 
-              icon={<Circle size={18}/>} 
-              onClick={() => {setSelectedTool(ShapeType.CIRCLE)}}
-              selected={(selectedTool === ShapeType.CIRCLE)}
-              tooltip="Circle (3)"
-            />
-
-            <ToolsBtn 
-              icon={<Square size={18}/>} 
-              onClick={() => {setSelectedTool(ShapeType.RECT)}}
-              selected={(selectedTool === ShapeType.RECT)}
-              tooltip="Rectangle (4)"
-            />
-
-            <ToolsBtn 
-              icon={<Eraser size={18}/>} 
-              onClick={() => {setSelectedTool(ShapeType.Eraser)}}
-              selected={(selectedTool === ShapeType.Eraser)}
-              tooltip="Eraser (5)"
-            />
-
-            <div className="border-t border-zinc-700 my-2"></div>
-
-            <ToolsBtn 
-              icon={<Undo2 size={18}/>} 
-              onClick={handleUndo}
-              disabled={!canUndo}
-              tooltip="Undo (Ctrl+Z)"
-            />
-
-            <ToolsBtn 
-              icon={<Redo2 size={18}/>} 
-              onClick={handleRedo}
-              disabled={!canRedo}
-              tooltip="Redo (Ctrl+Shift+Z)"
-            />
-
-            <div className="border-t border-zinc-700 my-2"></div>
-
-            <ToolsBtn 
-              icon={<Trash2 size={18}/>} 
-              onClick={handleClearCanvas}
-              tooltip="Clear Canvas"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Zoom Controls */}
-      <div className="fixed bottom-6 right-6">
-        <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-zinc-700">
-          <div className="text-white text-sm font-semibold text-center mb-3">
-            {zoomLevel}%
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <ToolsBtn 
-              icon={<ZoomIn size={18}/>} 
-              onClick={handleZoomIn}
-              tooltip="Zoom In"
-            />
-
-            <ToolsBtn 
-              icon={<ZoomOut size={18}/>} 
-              onClick={handleZoomOut}
-              tooltip="Zoom Out"
-            />
-
-            <ToolsBtn 
-              icon={<Maximize2 size={18}/>} 
-              onClick={handleResetZoom}
-              tooltip="Reset Zoom"
-            />
-          </div>
-        </div>
-      </div>
-
-    
+      {/* Zoom Controls - Bottom Right */}
+      <ZoomControls
+        zoomLevel={zoomLevel}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetZoom={handleResetZoom}
+      />
     </div>
   );
 }
