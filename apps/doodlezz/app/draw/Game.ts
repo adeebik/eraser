@@ -1,4 +1,4 @@
-import { Shape, ShapeType } from "@/types/types";
+import { Shape, ShapeStyle, ShapeType } from "@/types/types";
 import { getExistingShapes } from "./http";
 
 export class Game {
@@ -12,8 +12,14 @@ export class Game {
   private startY: number;
   private lastX: number;
   private lastY: number;
-  private selectedTool = ShapeType.RECT;
+  private selectedTool = ShapeType.PENCIL;
   private currentPath: {x: number, y: number}[] = [];
+
+  // Style properties
+  private strokeColor: string = "#ffffff";
+  private strokeWidth: number = 2;
+  private backgroundColor: string = "transparent";
+  private fillStyle: "none" | "solid" | "hatch" | "dots" = "none";
 
   // Zoom and Pan properties
   private scale: number = 1;
@@ -72,6 +78,118 @@ export class Game {
     this.stateChangeListeners.push(callback);
   }
 
+ // Add these methods to your Game class in Game.ts
+
+// Get the style of the currently selected shape
+public getSelectedShapeStyle(): ShapeStyle | null {
+  if (this.selectedShapeIndex === null) return null;
+  
+  const shape = this.existingShapes[this.selectedShapeIndex];
+  if (!shape || shape.type === ShapeType.Eraser) return null;
+  
+  return shape.style || {
+    strokeColor: "#ffffff",
+    strokeWidth: 2,
+    backgroundColor: "transparent",
+    fillStyle: "none",
+  };
+}
+
+// Update the style of the currently selected shape
+public updateSelectedShapeStyle(style: Partial<ShapeStyle>) {
+  if (this.selectedShapeIndex === null) return;
+  
+  const shape = this.existingShapes[this.selectedShapeIndex];
+  if (!shape || shape.type === ShapeType.Eraser) return;
+  
+  // Initialize style if it doesn't exist
+  if (!shape.style) {
+    shape.style = {
+      strokeColor: "#ffffff",
+      strokeWidth: 2,
+      backgroundColor: "transparent",
+      fillStyle: "none",
+    };
+  }
+  
+  // Update only the provided style properties
+  if (style.strokeColor !== undefined) shape.style.strokeColor = style.strokeColor;
+  if (style.strokeWidth !== undefined) shape.style.strokeWidth = style.strokeWidth;
+  if (style.backgroundColor !== undefined) shape.style.backgroundColor = style.backgroundColor;
+  if (style.fillStyle !== undefined) shape.style.fillStyle = style.fillStyle;
+  
+  // Redraw canvas
+  this.clearCanvas();
+  
+  // Broadcast update to other users
+  this.socket.send(
+    JSON.stringify({
+      type: "update",
+      payload: {
+        shapeIndex: this.selectedShapeIndex,
+        shape: JSON.stringify(shape),
+        roomId: this.roomId,
+      },
+    }),
+  );
+}
+
+// Duplicate selected shape (add this if you haven't already)
+public duplicateSelected() {
+  if (this.selectedShapeIndex === null) return;
+  
+  const shape = JSON.parse(JSON.stringify(this.existingShapes[this.selectedShapeIndex]));
+  
+  // Offset the duplicate slightly (20px down and right)
+  const offset = 20;
+  
+  if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
+    shape.x += offset;
+    shape.y += offset;
+  } else if (shape.type === ShapeType.PENCIL && shape.path) {
+    // Update path points
+    shape.path = shape.path.map((p: {x: number, y: number}) => ({
+      x: p.x + offset,
+      y: p.y + offset
+    }));
+    
+    // Update center if it exists
+    if (shape.centerX !== undefined) shape.centerX += offset;
+    if (shape.centerY !== undefined) shape.centerY += offset;
+  } else if (shape.type === ShapeType.Eraser && shape.erasePoints) {
+    // Update erase points
+    shape.erasePoints = shape.erasePoints.map((p: {x: number, y: number}) => ({
+      x: p.x + offset,
+      y: p.y + offset
+    }));
+  }
+  
+  // Add the duplicated shape
+  this.existingShapes.push(shape);
+  
+  // Select the new shape
+  this.selectedShapeIndex = this.existingShapes.length - 1;
+  this.selectedShapeIndices.clear();
+  
+  // Save to history
+  this.saveToHistory();
+  
+  // Redraw
+  this.clearCanvas();
+  this.notifyStateChange();
+  
+  // Broadcast to other users
+  this.socket.send(
+    JSON.stringify({
+      type: "chat",
+      payload: {
+        message: JSON.stringify(shape),
+        roomId: this.roomId,
+      },
+    }),
+  );
+}
+
   // Notify all listeners of state change
   private notifyStateChange() {
     this.stateChangeListeners.forEach(callback => callback());
@@ -87,6 +205,22 @@ export class Game {
 
   setShape(tool: ShapeType) {
     this.selectedTool = tool;
+  }
+
+  setStrokeColor(color: string) {
+    this.strokeColor = color;
+  }
+
+  setStrokeWidth(width: number) {
+    this.strokeWidth = width;
+  }
+
+  setBackgroundColor(color: string) {
+    this.backgroundColor = color;
+  }
+
+  setFillStyle(style: "none" | "solid" | "hatch" | "dots") {
+    this.fillStyle = style;
   }
 
   // Convert screen coordinates to canvas coordinates (accounting for zoom and pan)
@@ -439,12 +573,18 @@ export class Game {
       // Highlight selected shapes
       const isSelected = index === this.selectedShapeIndex || this.selectedShapeIndices.has(index);
       
+      // Use shape's style or defaults
+      const shapeStrokeColor = s.style?.strokeColor || "#ffffff";
+      const shapeStrokeWidth = s.style?.strokeWidth || 2;
+      const shapeBgColor = s.style?.backgroundColor || "transparent";
+      const shapeFillStyle = s.style?.fillStyle || "none";
+      
       if (isSelected) {
         this.ctx.strokeStyle = "#3b82f6"; // Blue for selection
         this.ctx.lineWidth = 3 / this.scale;
       } else {
-        this.ctx.strokeStyle = "white";
-        this.ctx.lineWidth = 2 / this.scale;
+        this.ctx.strokeStyle = shapeStrokeColor;
+        this.ctx.lineWidth = shapeStrokeWidth / this.scale;
       }
 
       // Apply rotation if exists
@@ -459,6 +599,12 @@ export class Game {
         this.ctx.rotate(rotation);
         this.ctx.translate(-centerX, -centerY);
         
+        // Draw fill first
+        if (shapeFillStyle !== "none" && !isSelected) {
+          this.drawFill(s.x, s.y, s.width, s.height, shapeBgColor, shapeFillStyle, s.type);
+        }
+        
+        // Then draw stroke
         if (s.type === ShapeType.RECT) {
           this.ctx.strokeRect(s.x, s.y, s.width, s.height);
         } else {
@@ -893,6 +1039,8 @@ export class Game {
       shape.centerX = centerX;
       shape.centerY = centerY;
     }
+
+    this.clearCanvas();
   }
 
   private drawGrid() {
@@ -920,6 +1068,127 @@ export class Game {
       this.ctx.lineTo(endX, y);
       this.ctx.stroke();
     }
+  }
+
+ // Replace the drawFill method in your Game.ts with this updated version
+// This fixes the fill opacity issue
+
+private drawFill(x: number, y: number, width: number, height: number, bgColor: string, fillStyle: string, shapeType: ShapeType) {
+  this.ctx.save();
+  
+  // Set global opacity for fills (40% opacity = 0.4)
+  const fillOpacity = 0.25; // 25% opacity for subtle fill
+  
+  if (fillStyle === "solid") {
+    // Apply opacity to the fill color
+    let fillColor = bgColor;
+    
+    if (bgColor === "transparent") {
+      fillColor = `rgba(255, 255, 255, ${fillOpacity})`;
+    } else {
+      // Convert hex to rgba with opacity
+      const hex = bgColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+    }
+    
+    this.ctx.fillStyle = fillColor;
+    if (shapeType === ShapeType.RECT) {
+      this.ctx.fillRect(x, y, width, height);
+    } else if (shapeType === ShapeType.CIRCLE) {
+      this.fillCircle(x, y, width, height);
+    }
+  } else if (fillStyle === "hatch") {
+    // Create hatch pattern with opacity
+    const patternCanvas = document.createElement('canvas');
+    const patternCtx = patternCanvas.getContext('2d')!;
+    patternCanvas.width = 8;
+    patternCanvas.height = 8;
+    
+    // Determine stroke color for pattern
+    let patternStroke = bgColor;
+    if (bgColor === "transparent") {
+      patternStroke = `rgba(255, 255, 255, ${fillOpacity})`;
+    } else {
+      const hex = bgColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      patternStroke = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+    }
+    
+    patternCtx.strokeStyle = patternStroke;
+    patternCtx.lineWidth = 1;
+    patternCtx.beginPath();
+    patternCtx.moveTo(0, 8);
+    patternCtx.lineTo(8, 0);
+    patternCtx.stroke();
+    
+    const pattern = this.ctx.createPattern(patternCanvas, 'repeat');
+    if (pattern) {
+      this.ctx.fillStyle = pattern;
+      if (shapeType === ShapeType.RECT) {
+        this.ctx.fillRect(x, y, width, height);
+      } else if (shapeType === ShapeType.CIRCLE) {
+        this.fillCircle(x, y, width, height);
+      }
+    }
+  } else if (fillStyle === "dots") {
+    // Create dots pattern with opacity
+    const patternCanvas = document.createElement('canvas');
+    const patternCtx = patternCanvas.getContext('2d')!;
+    patternCanvas.width = 10;
+    patternCanvas.height = 10;
+    
+    // Determine fill color for pattern
+    let patternFill = bgColor;
+    if (bgColor === "transparent") {
+      patternFill = `rgba(255, 255, 255, ${fillOpacity})`;
+    } else {
+      const hex = bgColor.replace('#', '');
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      patternFill = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+    }
+    
+    patternCtx.fillStyle = patternFill;
+    patternCtx.beginPath();
+    patternCtx.arc(5, 5, 1.5, 0, Math.PI * 2);
+    patternCtx.fill();
+    
+    const pattern = this.ctx.createPattern(patternCanvas, 'repeat');
+    if (pattern) {
+      this.ctx.fillStyle = pattern;
+      if (shapeType === ShapeType.RECT) {
+        this.ctx.fillRect(x, y, width, height);
+      } else if (shapeType === ShapeType.CIRCLE) {
+        this.fillCircle(x, y, width, height);
+      }
+    }
+  }
+  
+  this.ctx.restore();
+}
+
+  private fillCircle(x: number, y: number, width: number, height: number) {
+    const kappa = 0.5522848;
+    const ox = (width / 2) * kappa;
+    const oy = (height / 2) * kappa;
+    const xe = x + width;
+    const ye = y + height;
+    const xm = x + width / 2;
+    const ym = y + height / 2;
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, ym);
+    this.ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+    this.ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+    this.ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+    this.ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+    this.ctx.fill();
   }
 
   private drawPath(path: {x: number, y: number}[]) {
@@ -1156,6 +1425,14 @@ export class Game {
     const width = coords.x - this.startX;
     const height = coords.y - this.startY;
 
+    // Create style object for new shapes
+    const currentStyle = {
+      strokeColor: this.strokeColor,
+      strokeWidth: this.strokeWidth,
+      backgroundColor: this.backgroundColor,
+      fillStyle: this.fillStyle,
+    };
+
     let shape: Shape | null = null;
     if (this.selectedTool === ShapeType.RECT) {
       shape = {
@@ -1165,6 +1442,7 @@ export class Game {
         height: height,
         width: width,
         rotation: 0,
+        style: currentStyle,
       };
     } else if (this.selectedTool === ShapeType.CIRCLE) {
       shape = {
@@ -1174,6 +1452,7 @@ export class Game {
         height: height,
         width: width,
         rotation: 0,
+        style: currentStyle,
       };
     } else if (this.selectedTool === ShapeType.PENCIL) {
       // Calculate center for pencil shape
@@ -1187,6 +1466,7 @@ export class Game {
         rotation: 0,
         centerX: centerX,
         centerY: centerY,
+        style: currentStyle,
       };
     } else if (this.selectedTool === ShapeType.Eraser) {
       shape = {
@@ -1312,8 +1592,14 @@ export class Game {
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
-      this.ctx.strokeStyle = "white";
-      this.ctx.lineWidth = 2 / this.scale;
+      this.ctx.strokeStyle = this.strokeColor;
+      this.ctx.lineWidth = this.strokeWidth / this.scale;
+      
+      // Draw fill preview
+      if (this.fillStyle !== "none") {
+        this.drawFill(this.startX, this.startY, width, height, this.backgroundColor, this.fillStyle, ShapeType.RECT);
+      }
+      
       this.ctx.strokeRect(this.startX, this.startY, width, height);
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.CIRCLE) {
@@ -1321,8 +1607,14 @@ export class Game {
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
-      this.ctx.strokeStyle = "white";
-      this.ctx.lineWidth = 2 / this.scale;
+      this.ctx.strokeStyle = this.strokeColor;
+      this.ctx.lineWidth = this.strokeWidth / this.scale;
+      
+      // Draw fill preview
+      if (this.fillStyle !== "none") {
+        this.drawFill(this.startX, this.startY, width, height, this.backgroundColor, this.fillStyle, ShapeType.CIRCLE);
+      }
+      
       this.drawCircle(this.startX, this.startY, width, height);
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.PENCIL) {
@@ -1331,8 +1623,8 @@ export class Game {
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
       this.ctx.globalCompositeOperation = "source-over";
-      this.ctx.strokeStyle = "white";
-      this.ctx.lineWidth = 2 / this.scale;
+      this.ctx.strokeStyle = this.strokeColor;
+      this.ctx.lineWidth = this.strokeWidth / this.scale;
       this.ctx.lineCap = "round";
       this.ctx.lineJoin = "round";
       this.ctx.beginPath();
