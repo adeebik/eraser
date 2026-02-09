@@ -41,4 +41,3 @@ export type Shape = {
   erasePoints: Array<{x: number; y: number}>;
   rotation?: number;
 }
-

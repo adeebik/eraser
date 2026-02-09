@@ -172,16 +172,16 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [game]);
 
-  // if (!game) {
-  //   return (
-  //     <div className="flex items-center justify-center h-screen bg-black">
-  //       <div className="text-center">
-  //         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-  //         <p className="text-white text-lg">Loading canvas...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (!game) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+          <p className="text-white text-lg">Loading canvas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black">

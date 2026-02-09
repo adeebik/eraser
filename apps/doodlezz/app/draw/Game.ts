@@ -1054,20 +1054,6 @@ public duplicateSelected() {
     this.ctx.lineWidth = 1 / this.scale;
 
     // Vertical lines
-    for (let x = startX; x < endX; x += gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, startY);
-      this.ctx.lineTo(x, endY);
-      this.ctx.stroke();
-    }
-
-    // Horizontal lines
-    for (let y = startY; y < endY; y += gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(startX, y);
-      this.ctx.lineTo(endX, y);
-      this.ctx.stroke();
-    }
   }
 
  // Replace the drawFill method in your Game.ts with this updated version

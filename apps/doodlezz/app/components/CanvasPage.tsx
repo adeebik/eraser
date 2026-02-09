@@ -8,7 +8,9 @@ export function CanvasPage({ roomId }: { roomId: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI0YjFjNjBkLTY3YmUtNDY4NC04YWZkLTVjZTJlMjY0MGNiOCIsImlhdCI6MTc2OTk3OTI1OH0.0CMwV8ybdQbX453Jg4wRtrgVBi3qSlD3YlP8i1wyIpA`);
+    const ws = new WebSocket(
+      `${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI0YjFjNjBkLTY3YmUtNDY4NC04YWZkLTVjZTJlMjY0MGNiOCIsImlhdCI6MTc2OTk3OTI1OH0.0CMwV8ybdQbX453Jg4wRtrgVBi3qSlD3YlP8i1wyIpA`,
+    );
 
     ws.onopen = () => {
       setSocket(ws);
@@ -22,10 +24,29 @@ export function CanvasPage({ roomId }: { roomId: string }) {
         }),
       );
     };
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, [roomId]);
 
   if (!socket) {
-    return <div> Connecting to server ... </div>;
+    return (
+       <div className="flex items-center justify-center h-screen bg-black">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+          <p className="text-white text-lg">Connecting to server...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
