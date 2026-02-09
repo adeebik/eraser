@@ -7,30 +7,100 @@ datasource db {
   provider = "postgresql"
 }
 
+
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String
-  name        String
-  avatar      String?
-  rooms       Room[]
-  chats       Chat[]
+  id              String      @id @default(uuid())
+  email           String      @unique
+  password        String
+  name            String
+  createdAt       DateTime    @default(now())
+
+  rooms           Room[]
+  chats           Chat[]
+  memberOfRooms   Members[]
+}
+
+model Members {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  roomId      String
+  joinedAt    DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rooms       Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
 }
 
 model Room {
-  id          Int       @id @default(autoincrement())
+  id          String    @id @default(uuid())
   slug        String    @unique
-  createdAt   DateTime  @default(now())
   adminId     String
-  admin       User      @relation(fields: [adminId], references: [id])
+  shared      String    @unique @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  admin       User      @relation(fields: [adminId], references: [id], onDelete: Cascade)
   chats       Chat[]
+  members     Members[]
 }
 
 model Chat {
   id          Int       @id @default(autoincrement())
-  roomId      Int
+  roomId      String
   message     String
   userId      String
-  room        Room      @relation(fields: [roomId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  shape       Shape?
+
+  room        Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Shape {
+  id              Int        @id @default(autoincrement())
+  chatId          Int        @unique
+  type            String
+
+  x               Float?
+  y               Float?
+  height          Float?
+  width           Float?
+  rotation        Float?     @default(0)
+
+  centerX         Float?
+  centerY         Float?
+  
+  strokeColor     String     @default("#ffffff")
+  strokeWidth     Int        @default(2)
+  backgroundColor String     @default("transparent")
+  fillStyle       String     @default("NONE")
+
+  chat            Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  pathPoints      PathPoint[]
+  erasePoints     ErasePoint[]
+
+}
+
+model PathPoint {
+  id        Int   @id @default(autoincrement())
+  shapeId   Int
+  x         Float
+  y         Float
+  order     Int
+
+  shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
+
+}
+
+model ErasePoint {
+  id        Int   @id @default(autoincrement())
+  shapeId   Int
+  x         Float
+  y         Float
+  order     Int
+
+  shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
+
 }
