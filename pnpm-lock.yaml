@@ -33,6 +33,9 @@ importers:
 
   apps/doodlezz:
     dependencies:
+      '@repo/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       axios:
         specifier: ^1.13.4
         version: 1.13.4
