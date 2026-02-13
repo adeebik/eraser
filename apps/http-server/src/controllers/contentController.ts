@@ -17,4 +17,4 @@ export const getChats = async (req: Request, res: Response) => {
   res.json({
     response,
   });
-}
+};

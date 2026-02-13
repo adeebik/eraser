@@ -5,7 +5,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/config";
 
-
 export const singinController = async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
@@ -60,11 +59,7 @@ export const singinController = async (req: Request, res: Response) => {
       error: error,
     });
   }
-}
-
-
-
-
+};
 
 export const singupController = async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
@@ -106,4 +101,4 @@ export const singupController = async (req: Request, res: Response) => {
       });
     }
   }
-}
+};
