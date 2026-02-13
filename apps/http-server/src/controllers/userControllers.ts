@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/config";
 
-export const singinController = async (req: Request, res: Response) => {
+export const signinController = async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
   if (!parseData.success) {
@@ -61,7 +61,7 @@ export const singinController = async (req: Request, res: Response) => {
   }
 };
 
-export const singupController = async (req: Request, res: Response) => {
+export const signupController = async (req: Request, res: Response) => {
   const parseData = authSchema.safeParse(req.body);
 
   if (!parseData.success) {

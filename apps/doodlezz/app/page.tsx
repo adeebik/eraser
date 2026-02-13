@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
-import { Paintbrush, Users, Zap, Github, PencilLine } from "lucide-react";
+import { Paintbrush, Users, Zap, PencilLine } from "lucide-react";
 
 export default function Home() {
   return (
@@ -15,10 +15,10 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-4">
           <Link href="/signin">
-            <Button variant="secondary" className="border-none shadow-none text-gray-600 px-3 py-2">Log In</Button>
+            <Button variant="secondary" className="border-none bg-red-200 shadow-none text-gray-600 px-3 py-2">Log In</Button>
           </Link>
           <Link href="/signup">
-            <Button variant="pastel-red" className="border-none shadow-none text-zinc-700 px-3 py-2" >Sign Up Free</Button>
+            <Button variant="pastel-red" className="border-none bg-orange-200 shadow-none text-zinc-700 px-3 py-2" >Sign Up</Button>
           </Link>
         </div>
       </nav>
