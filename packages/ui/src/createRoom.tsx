@@ -7,9 +7,12 @@ import { Alert } from "./alert";
 import { RefObject } from "react";
 
 export interface AlertData {
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "delete";
   title: string;
   message: string;
+  roomId?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
 }
 
 interface CreateRoomModalProps {

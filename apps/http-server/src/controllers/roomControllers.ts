@@ -35,7 +35,7 @@ export const createRoom = async (req: Request, res: Response) => {
       name: room.slug,
     });
   } catch (error) {
-    res.status(411).json({
+    res.status(402).json({
       err:"duplicateEntry",
       msg: "Room already Exists",
     });

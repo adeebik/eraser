@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     getDashboard();
-  }, [isCreateModalOpen,isJoinModalOpen]);
+  }, []);
 
   async function getDashboard() {
     try {
@@ -108,11 +108,8 @@ export default function DashboardPage() {
           title: "Success",
           message: "Room created successfully!",
         });
-        // Clear input
         if (roomNameRef.current) roomNameRef.current.value = "";
-        // Refresh room list
         getDashboard();
-        // Close modal after a delay
         setTimeout(() => {
           setIsCreateModalOpen(false);
           setAlert(null);
@@ -125,6 +122,50 @@ export default function DashboardPage() {
         message: error.response?.data?.msg || "An unexpected error occurred.",
       });
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    setAlert({
+      type: "delete",
+      title: "Delete Room",
+      message: "Are you sure you want to delete this room? This action cannot be undone.",
+      roomId: id,
+      onConfirm: async () => {
+        try {
+          const response = await axios.post(
+            `${BE_URL}/room/delete`,
+            { roomId: id },
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          
+          if (response.data.msg === "Room deleted successfully") {
+            setAlert({
+              type: "success",
+              title: "Deleted",
+              message: "Room has been deleted successfully.",
+              roomId: id
+            });
+            getDashboard();
+            setTimeout(() => setAlert(null), 2000);
+          } else {
+            setAlert({
+              type: "error",
+              title: "Error",
+              message: response.data.msg || "Failed to delete room.",
+              roomId: id
+            });
+          }
+        } catch (error: any) {
+          setAlert({
+            type: "error",
+            title: "Error",
+            message: "An unexpected error occurred.",
+            roomId: id
+          });
+        }
+      },
+      onCancel: () => setAlert(null)
+    });
   };
 
   const handleJoinRoom = (link: string) => {
@@ -211,11 +252,14 @@ export default function DashboardPage() {
             {roomsInfo.map((room) => (
               <RoomCard
                 key={room.id}
+                onDelete={handleDelete}
                 id={room.id}
                 slug={room.slug}
                 adminName={room.admin.name}
                 createdAt={getTimeAgo(new Date(room.createdAt))}
                 isAdmin={room.isAdmin}
+                alert={alert}
+                setAlert = {setAlert}
               />
             ))}
 
