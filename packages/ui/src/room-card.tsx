@@ -11,7 +11,7 @@ interface RoomCardProps {
   adminName: string;
   createdAt: string;
   isAdmin: boolean;
-  onShare?: () => void;
+  onShare?: (id: string) => void;
   onDelete?: (id: string) => void;
   onLeave?: (id: string) => void;
   onJoin?: () => void;
@@ -75,7 +75,7 @@ export function RoomCard({
         <Button
           variant="pastel-green"
           className="flex-1 py-2 hover:bg-green-300"
-          onClick={onShare}
+          onClick={() => onShare?.(id)}
         >
           <Share2 size={18} />
           Share

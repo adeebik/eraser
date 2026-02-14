@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { RoomCard } from "@repo/ui/room-card";
 import { CreateRoomModal, type AlertData } from "@repo/ui/createRoom";
 import { JoinRoomModal } from "@repo/ui/join-room-modal";
+import { ShareRoomModal } from "@repo/ui/share-room-modal";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { BE_URL } from "@/config/config";
@@ -37,6 +38,8 @@ export default function DashboardPage() {
   const [roomsInfo, setRoomsInfo] = useState<Room[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [sharingRoom, setSharingRoom] = useState<{id: string, slug: string, isAdmin: boolean, shared: string | null} | null>(null);
   const [token, setToken] = useState("");
   const [alert, setAlert] = useState<AlertData | null>(null);
 
@@ -222,6 +225,38 @@ export default function DashboardPage() {
     console.log("Joining room:", link);
   };
 
+  const handleShare = (id: string) => {
+    const room = roomsInfo.find(r => r.id === id);
+    if (room) {
+      setSharingRoom({ id: room.id, slug: room.slug, isAdmin: room.isAdmin, shared: room.shared || null });
+      setIsShareModalOpen(true);
+    }
+  };
+
+  const onShareGenerate = async () => {
+    if (!sharingRoom) return;
+    try {
+      const response = await axios.post(
+        `${BE_URL}/room/share`,
+        { enableShare: true, roomId: sharingRoom.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const newSharedLink = response.data.sharedLink;
+      
+      // Update local state
+      setRoomsInfo(prev => prev.map(r => 
+        r.id === sharingRoom.id ? { ...r, shared: newSharedLink } : r
+      ));
+      
+      setSharingRoom(prev => prev ? { ...prev, shared: newSharedLink } : null);
+      
+      return newSharedLink;
+    } catch (error) {
+      console.error("Error generating share link:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f9f7f2]">
@@ -306,6 +341,7 @@ export default function DashboardPage() {
                 isAdmin={room.isAdmin}
                 alert={alert}
                 setAlert={setAlert}
+                onShare={handleShare}
               />
             ))}
 
@@ -338,6 +374,17 @@ export default function DashboardPage() {
         onClose={() => setIsJoinModalOpen(false)}
         onJoin={handleJoinRoom}
       />
+
+      {sharingRoom && (
+        <ShareRoomModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          isAdmin={sharingRoom.isAdmin}
+          roomSlug={sharingRoom.slug}
+          initialLink={sharingRoom.shared || undefined}
+          onGenerate={onShareGenerate}
+        />
+      )}
     </div>
   );
 }
