@@ -28,7 +28,7 @@ export function JoinRoomModal({ isOpen, onClose, onJoin }: JoinRoomModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-3xl border-2 border-black bg-white p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center relative animate-in fade-in zoom-in duration-300">
-        <div className="absolute right-4 top-4">
+        <div className="absolute right-0 top-0 p-3">
             <button 
                 onClick={onClose}
                 className="rounded-full p-2 hover:bg-gray-100 transition-colors"

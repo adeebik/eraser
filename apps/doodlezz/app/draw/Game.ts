@@ -13,7 +13,7 @@ export class Game {
   private lastX: number;
   private lastY: number;
   private selectedTool = ShapeType.PENCIL;
-  private currentPath: {x: number, y: number}[] = [];
+  private currentPath: { x: number; y: number }[] = [];
 
   // Style properties
   private strokeColor: string = "#ffffff";
@@ -78,121 +78,130 @@ export class Game {
     this.stateChangeListeners.push(callback);
   }
 
- // Add these methods to your Game class in Game.ts
+  // Add these methods to your Game class in Game.ts
 
-// Get the style of the currently selected shape
-public getSelectedShapeStyle(): ShapeStyle | null {
-  if (this.selectedShapeIndex === null) return null;
-  
-  const shape = this.existingShapes[this.selectedShapeIndex];
-  if (!shape || shape.type === ShapeType.Eraser) return null;
-  
-  return shape.style || {
-    strokeColor: "#ffffff",
-    strokeWidth: 2,
-    backgroundColor: "transparent",
-    fillStyle: "none",
-  };
-}
+  // Get the style of the currently selected shape
+  public getSelectedShapeStyle(): ShapeStyle | null {
+    if (this.selectedShapeIndex === null) return null;
 
-// Update the style of the currently selected shape
-public updateSelectedShapeStyle(style: Partial<ShapeStyle>) {
-  if (this.selectedShapeIndex === null) return;
-  
-  const shape = this.existingShapes[this.selectedShapeIndex];
-  if (!shape || shape.type === ShapeType.Eraser) return;
-  
-  // Initialize style if it doesn't exist
-  if (!shape.style) {
-    shape.style = {
-      strokeColor: "#ffffff",
-      strokeWidth: 2,
-      backgroundColor: "transparent",
-      fillStyle: "none",
-    };
+    const shape = this.existingShapes[this.selectedShapeIndex];
+    if (!shape || shape.type === ShapeType.Eraser) return null;
+
+    return (
+      shape.style || {
+        strokeColor: "#ffffff",
+        strokeWidth: 2,
+        backgroundColor: "transparent",
+        fillStyle: "none",
+      }
+    );
   }
-  
-  // Update only the provided style properties
-  if (style.strokeColor !== undefined) shape.style.strokeColor = style.strokeColor;
-  if (style.strokeWidth !== undefined) shape.style.strokeWidth = style.strokeWidth;
-  if (style.backgroundColor !== undefined) shape.style.backgroundColor = style.backgroundColor;
-  if (style.fillStyle !== undefined) shape.style.fillStyle = style.fillStyle;
-  
-  // Redraw canvas
-  this.clearCanvas();
-  
-  // Broadcast update to other users
-  this.socket.send(
-    JSON.stringify({
-      type: "update",
-      payload: {
-        shapeIndex: this.selectedShapeIndex,
-        shape: JSON.stringify(shape),
-        roomId: this.roomId,
-      },
-    }),
-  );
-}
 
-// Duplicate selected shape (add this if you haven't already)
-public duplicateSelected() {
-  if (this.selectedShapeIndex === null) return;
-  
-  const shape = JSON.parse(JSON.stringify(this.existingShapes[this.selectedShapeIndex]));
-  
-  // Offset the duplicate slightly (20px down and right)
-  const offset = 20;
-  
-  if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
-    shape.x += offset;
-    shape.y += offset;
-  } else if (shape.type === ShapeType.PENCIL && shape.path) {
-    // Update path points
-    shape.path = shape.path.map((p: {x: number, y: number}) => ({
-      x: p.x + offset,
-      y: p.y + offset
-    }));
-    
-    // Update center if it exists
-    if (shape.centerX !== undefined) shape.centerX += offset;
-    if (shape.centerY !== undefined) shape.centerY += offset;
-  } else if (shape.type === ShapeType.Eraser && shape.erasePoints) {
-    // Update erase points
-    shape.erasePoints = shape.erasePoints.map((p: {x: number, y: number}) => ({
-      x: p.x + offset,
-      y: p.y + offset
-    }));
+  // Update the style of the currently selected shape
+  public updateSelectedShapeStyle(style: Partial<ShapeStyle>) {
+    if (this.selectedShapeIndex === null) return;
+
+    const shape = this.existingShapes[this.selectedShapeIndex];
+    if (!shape || shape.type === ShapeType.Eraser) return;
+
+    // Initialize style if it doesn't exist
+    if (!shape.style) {
+      shape.style = {
+        strokeColor: "#ffffff",
+        strokeWidth: 2,
+        backgroundColor: "transparent",
+        fillStyle: "none",
+      };
+    }
+
+    // Update only the provided style properties
+    if (style.strokeColor !== undefined)
+      shape.style.strokeColor = style.strokeColor;
+    if (style.strokeWidth !== undefined)
+      shape.style.strokeWidth = style.strokeWidth;
+    if (style.backgroundColor !== undefined)
+      shape.style.backgroundColor = style.backgroundColor;
+    if (style.fillStyle !== undefined) shape.style.fillStyle = style.fillStyle;
+
+    // Redraw canvas
+    this.clearCanvas();
+
+    // Broadcast update to other users
+    this.socket.send(
+      JSON.stringify({
+        type: "update",
+        payload: {
+          shapeIndex: this.selectedShapeIndex,
+          shape: JSON.stringify(shape),
+          roomId: this.roomId,
+        },
+      }),
+    );
   }
-  
-  // Add the duplicated shape
-  this.existingShapes.push(shape);
-  
-  // Select the new shape
-  this.selectedShapeIndex = this.existingShapes.length - 1;
-  this.selectedShapeIndices.clear();
-  
-  // Save to history
-  this.saveToHistory();
-  
-  // Redraw
-  this.clearCanvas();
-  this.notifyStateChange();
-  
-  // Broadcast to other users
-  this.socket.send(
-    JSON.stringify({
-      type: "chat",
-      payload: {
-        message: JSON.stringify(shape),
-        roomId: this.roomId,
-      },
-    }),
-  );
-}
+
+  // Duplicate selected shape (add this if you haven't already)
+  public duplicateSelected() {
+    if (this.selectedShapeIndex === null) return;
+
+    const shape = JSON.parse(
+      JSON.stringify(this.existingShapes[this.selectedShapeIndex]),
+    );
+
+    // Offset the duplicate slightly (20px down and right)
+    const offset = 20;
+
+    if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
+      shape.x += offset;
+      shape.y += offset;
+    } else if (shape.type === ShapeType.PENCIL && shape.path) {
+      // Update path points
+      shape.path = shape.path.map((p: { x: number; y: number }) => ({
+        x: p.x + offset,
+        y: p.y + offset,
+      }));
+
+      // Update center if it exists
+      if (shape.centerX !== undefined) shape.centerX += offset;
+      if (shape.centerY !== undefined) shape.centerY += offset;
+    } else if (shape.type === ShapeType.Eraser && shape.erasePoints) {
+      // Update erase points
+      shape.erasePoints = shape.erasePoints.map(
+        (p: { x: number; y: number }) => ({
+          x: p.x + offset,
+          y: p.y + offset,
+        }),
+      );
+    }
+
+    // Add the duplicated shape
+    this.existingShapes.push(shape);
+
+    // Select the new shape
+    this.selectedShapeIndex = this.existingShapes.length - 1;
+    this.selectedShapeIndices.clear();
+
+    // Save to history
+    this.saveToHistory();
+
+    // Redraw
+    this.clearCanvas();
+    this.notifyStateChange();
+
+    // Broadcast to other users
+    this.socket.send(
+      JSON.stringify({
+        type: "chat",
+        payload: {
+          message: JSON.stringify(shape),
+          roomId: this.roomId,
+        },
+      }),
+    );
+  }
 
   // Notify all listeners of state change
   private notifyStateChange() {
-    this.stateChangeListeners.forEach(callback => callback());
+    this.stateChangeListeners.forEach((callback) => callback());
   }
 
   destroy() {
@@ -224,7 +233,10 @@ public duplicateSelected() {
   }
 
   // Convert screen coordinates to canvas coordinates (accounting for zoom and pan)
-  private screenToCanvas(screenX: number, screenY: number): {x: number, y: number} {
+  private screenToCanvas(
+    screenX: number,
+    screenY: number,
+  ): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
     const x = (screenX - rect.left - this.offsetX) / this.scale;
     const y = (screenY - rect.top - this.offsetY) / this.scale;
@@ -286,10 +298,10 @@ public duplicateSelected() {
 
     // Remove any history after current step (when user makes new action after undo)
     this.localHistory = this.localHistory.slice(0, this.localHistoryStep + 1);
-    
+
     // Add current state to history
     this.localHistory.push(JSON.parse(JSON.stringify(this.existingShapes)));
-    
+
     // Limit history size
     if (this.localHistory.length > this.maxHistorySize) {
       this.localHistory.shift();
@@ -303,10 +315,12 @@ public duplicateSelected() {
   public undo() {
     if (this.localHistoryStep > 0) {
       this.localHistoryStep--;
-      this.existingShapes = JSON.parse(JSON.stringify(this.localHistory[this.localHistoryStep]));
+      this.existingShapes = JSON.parse(
+        JSON.stringify(this.localHistory[this.localHistoryStep]),
+      );
       this.clearCanvas();
       this.notifyStateChange();
-      
+
       // Broadcast the entire state to sync with other users
       this.broadcastUndo();
     }
@@ -315,10 +329,12 @@ public duplicateSelected() {
   public redo() {
     if (this.localHistoryStep < this.localHistory.length - 1) {
       this.localHistoryStep++;
-      this.existingShapes = JSON.parse(JSON.stringify(this.localHistory[this.localHistoryStep]));
+      this.existingShapes = JSON.parse(
+        JSON.stringify(this.localHistory[this.localHistoryStep]),
+      );
       this.clearCanvas();
       this.notifyStateChange();
-      
+
       // Broadcast the entire state to sync with other users
       this.broadcastRedo();
     }
@@ -366,7 +382,7 @@ public duplicateSelected() {
     this.saveToHistory();
     this.clearCanvas();
     this.notifyStateChange();
-    
+
     // Broadcast clear to other users
     this.socket.send(
       JSON.stringify({
@@ -382,8 +398,10 @@ public duplicateSelected() {
   public deleteSelected() {
     if (this.selectedShapeIndices.size > 0) {
       // Delete multiple selected shapes
-      const indicesToDelete = Array.from(this.selectedShapeIndices).sort((a, b) => b - a);
-      indicesToDelete.forEach(index => {
+      const indicesToDelete = Array.from(this.selectedShapeIndices).sort(
+        (a, b) => b - a,
+      );
+      indicesToDelete.forEach((index) => {
         this.existingShapes.splice(index, 1);
       });
       this.selectedShapeIndices.clear();
@@ -395,11 +413,11 @@ public duplicateSelected() {
     } else {
       return; // Nothing selected
     }
-    
+
     this.saveToHistory();
     this.clearCanvas();
     this.notifyStateChange();
-    
+
     // Broadcast deletion to other users
     this.socket.send(
       JSON.stringify({
@@ -427,15 +445,18 @@ public duplicateSelected() {
       const radiusY = Math.abs(shape.height / 2);
       const dx = (x - centerX) / radiusX;
       const dy = (y - centerY) / radiusY;
-      return (dx * dx + dy * dy) <= 1;
+      return dx * dx + dy * dy <= 1;
     } else if (shape.type === ShapeType.PENCIL && shape.path) {
       // Check if point is near any segment of the path
       const threshold = 10 / this.scale;
       for (let i = 0; i < shape.path.length - 1; i++) {
         const dist = this.distanceToLineSegment(
-          x, y,
-          shape.path[i].x, shape.path[i].y,
-          shape.path[i + 1].x, shape.path[i + 1].y
+          x,
+          y,
+          shape.path[i].x,
+          shape.path[i].y,
+          shape.path[i + 1].x,
+          shape.path[i + 1].y,
         );
         if (dist < threshold) return true;
       }
@@ -444,22 +465,31 @@ public duplicateSelected() {
     return false;
   }
 
-  private distanceToLineSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  private distanceToLineSegment(
+    px: number,
+    py: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ): number {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const lengthSquared = dx * dx + dy * dy;
-    
+
     if (lengthSquared === 0) {
       return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
     }
-    
+
     let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
     t = Math.max(0, Math.min(1, t));
-    
+
     const nearestX = x1 + t * dx;
     const nearestY = y1 + t * dy;
-    
-    return Math.sqrt((px - nearestX) * (px - nearestX) + (py - nearestY) * (py - nearestY));
+
+    return Math.sqrt(
+      (px - nearestX) * (px - nearestX) + (py - nearestY) * (py - nearestY),
+    );
   }
 
   private findShapeAtPoint(x: number, y: number): number | null {
@@ -475,17 +505,17 @@ public duplicateSelected() {
 
   private moveShape(shapeIndex: number, deltaX: number, deltaY: number) {
     const shape = this.existingShapes[shapeIndex];
-    
+
     if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
       shape.x += deltaX;
       shape.y += deltaY;
     } else if (shape.type === ShapeType.PENCIL && shape.path) {
       // Update path points
-      shape.path = shape.path.map(point => ({
+      shape.path = shape.path.map((point) => ({
         x: point.x + deltaX,
-        y: point.y + deltaY
+        y: point.y + deltaY,
       }));
-      
+
       // Update center if it exists (for rotation)
       if (shape.centerX !== undefined && shape.centerY !== undefined) {
         shape.centerX += deltaX;
@@ -497,7 +527,7 @@ public duplicateSelected() {
   async init() {
     // Clear any local storage on refresh
     localStorage.clear();
-    
+
     this.existingShapes = await getExistingShapes(this.roomId);
     this.saveToHistory(); // Save initial state
     this.clearCanvas();
@@ -565,20 +595,22 @@ public duplicateSelected() {
     this.ctx.strokeStyle = "white";
     this.ctx.fillStyle = "white";
     this.ctx.lineWidth = 2 / this.scale; // Adjust line width for zoom
-    
+
     // Draw all non-eraser shapes
     this.existingShapes.forEach((s, index) => {
       if (s.type === ShapeType.Eraser) return;
 
       // Highlight selected shapes
-      const isSelected = index === this.selectedShapeIndex || this.selectedShapeIndices.has(index);
-      
+      const isSelected =
+        index === this.selectedShapeIndex ||
+        this.selectedShapeIndices.has(index);
+
       // Use shape's style or defaults
       const shapeStrokeColor = s.style?.strokeColor || "#ffffff";
       const shapeStrokeWidth = s.style?.strokeWidth || 2;
       const shapeBgColor = s.style?.backgroundColor || "transparent";
       const shapeFillStyle = s.style?.fillStyle || "none";
-      
+
       if (isSelected) {
         this.ctx.strokeStyle = "#3b82f6"; // Blue for selection
         this.ctx.lineWidth = 3 / this.scale;
@@ -589,32 +621,43 @@ public duplicateSelected() {
 
       // Apply rotation if exists
       const rotation = s.rotation || 0;
-      
+
       if (s.type === ShapeType.RECT || s.type === ShapeType.CIRCLE) {
         const centerX = s.x + s.width / 2;
         const centerY = s.y + s.height / 2;
-        
+
         this.ctx.save();
         this.ctx.translate(centerX, centerY);
         this.ctx.rotate(rotation);
         this.ctx.translate(-centerX, -centerY);
-        
+
         // Draw fill first
         if (shapeFillStyle !== "none" && !isSelected) {
-          this.drawFill(s.x, s.y, s.width, s.height, shapeBgColor, shapeFillStyle, s.type);
+          this.drawFill(
+            s.x,
+            s.y,
+            s.width,
+            s.height,
+            shapeBgColor,
+            shapeFillStyle,
+            s.type,
+          );
         }
-        
+
         // Then draw stroke
         if (s.type === ShapeType.RECT) {
           this.ctx.strokeRect(s.x, s.y, s.width, s.height);
         } else {
           this.drawCircle(s.x, s.y, s.width, s.height);
         }
-        
+
         this.ctx.restore();
-        
+
         // Draw selection box only for single selection
-        if (index === this.selectedShapeIndex && this.selectedShapeIndices.size === 0) {
+        if (
+          index === this.selectedShapeIndex &&
+          this.selectedShapeIndices.size === 0
+        ) {
           this.drawSelectionBox(s.x, s.y, s.width, s.height, rotation);
         }
       } else if (s.type === ShapeType.PENCIL && s.path) {
@@ -627,7 +670,11 @@ public duplicateSelected() {
           }
         }
 
-        if (rotation !== 0 && s.centerX !== undefined && s.centerY !== undefined) {
+        if (
+          rotation !== 0 &&
+          s.centerX !== undefined &&
+          s.centerY !== undefined
+        ) {
           this.ctx.save();
           this.ctx.translate(s.centerX, s.centerY);
           this.ctx.rotate(rotation);
@@ -637,14 +684,23 @@ public duplicateSelected() {
         } else {
           this.drawPath(s.path);
         }
-        
+
         // Draw selection highlight for pencil (only for single selection)
-        if (index === this.selectedShapeIndex && this.selectedShapeIndices.size === 0) {
+        if (
+          index === this.selectedShapeIndex &&
+          this.selectedShapeIndices.size === 0
+        ) {
           const bounds = this.getPathBounds(s.path);
           if (bounds) {
             const width = bounds.maxX - bounds.minX;
             const height = bounds.maxY - bounds.minY;
-            this.drawSelectionBox(bounds.minX, bounds.minY, width, height, rotation);
+            this.drawSelectionBox(
+              bounds.minX,
+              bounds.minY,
+              width,
+              height,
+              rotation,
+            );
           }
         }
       }
@@ -665,13 +721,13 @@ public duplicateSelected() {
       if (s.type === ShapeType.Eraser && s.erasePoints) {
         this.ctx.globalCompositeOperation = "destination-out";
         this.ctx.fillStyle = "white";
-        
-        s.erasePoints.forEach(point => {
+
+        s.erasePoints.forEach((point) => {
           this.ctx.beginPath();
           this.ctx.arc(point.x, point.y, 8 / this.scale, 0, Math.PI * 2);
           this.ctx.fill();
         });
-        
+
         this.ctx.globalCompositeOperation = "source-over";
       }
     });
@@ -680,88 +736,107 @@ public duplicateSelected() {
     this.ctx.restore();
   }
 
-  private drawSelectionBox(x: number, y: number, width: number, height: number, rotation: number = 0) {
+  private drawSelectionBox(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    rotation: number = 0,
+  ) {
     this.ctx.save();
-    
+
     const centerX = x + width / 2;
     const centerY = y + height / 2;
-    
+
     // Apply rotation to selection box
     this.ctx.translate(centerX, centerY);
     this.ctx.rotate(rotation);
     this.ctx.translate(-centerX, -centerY);
-    
+
     this.ctx.strokeStyle = "#3b82f6";
     this.ctx.lineWidth = 1 / this.scale;
     this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
-    
+
     const padding = 5 / this.scale;
     const left = Math.min(x, x + width) - padding;
     const top = Math.min(y, y + height) - padding;
     const w = Math.abs(width) + padding * 2;
     const h = Math.abs(height) + padding * 2;
-    
+
     this.ctx.strokeRect(left, top, w, h);
-    
+
     // Draw handles
     this.ctx.setLineDash([]);
     this.ctx.fillStyle = "#3b82f6";
     const handleSize = 8 / this.scale;
-    
+
     // Corner handles
     const corners = [
-      [left, top],           // nw
-      [left + w, top],       // ne
-      [left, top + h],       // sw
-      [left + w, top + h]    // se
+      [left, top], // nw
+      [left + w, top], // ne
+      [left, top + h], // sw
+      [left + w, top + h], // se
     ];
-    
+
     corners.forEach(([cx, cy]) => {
-      this.ctx.fillRect(cx - handleSize/2, cy - handleSize/2, handleSize, handleSize);
+      this.ctx.fillRect(
+        cx - handleSize / 2,
+        cy - handleSize / 2,
+        handleSize,
+        handleSize,
+      );
     });
-    
+
     // Edge handles
     const edges = [
-      [left + w/2, top],     // n
-      [left + w/2, top + h], // s
-      [left, top + h/2],     // w
-      [left + w, top + h/2]  // e
+      [left + w / 2, top], // n
+      [left + w / 2, top + h], // s
+      [left, top + h / 2], // w
+      [left + w, top + h / 2], // e
     ];
-    
+
     edges.forEach(([cx, cy]) => {
-      this.ctx.fillRect(cx - handleSize/2, cy - handleSize/2, handleSize, handleSize);
+      this.ctx.fillRect(
+        cx - handleSize / 2,
+        cy - handleSize / 2,
+        handleSize,
+        handleSize,
+      );
     });
-    
+
     // Rotation handle (above top center)
     const rotateDistance = 30 / this.scale;
-    const rotateX = left + w/2;
+    const rotateX = left + w / 2;
     const rotateY = top - rotateDistance;
-    
+
     // Draw line to rotation handle
     this.ctx.beginPath();
-    this.ctx.moveTo(left + w/2, top);
+    this.ctx.moveTo(left + w / 2, top);
     this.ctx.lineTo(rotateX, rotateY);
     this.ctx.strokeStyle = "#3b82f6";
     this.ctx.lineWidth = 1 / this.scale;
     this.ctx.stroke();
-    
+
     // Draw rotation handle as circle
     this.ctx.beginPath();
-    this.ctx.arc(rotateX, rotateY, handleSize/2, 0, Math.PI * 2);
+    this.ctx.arc(rotateX, rotateY, handleSize / 2, 0, Math.PI * 2);
     this.ctx.fillStyle = "#10b981"; // Green for rotation
     this.ctx.fill();
     this.ctx.strokeStyle = "#3b82f6";
     this.ctx.lineWidth = 2 / this.scale;
     this.ctx.stroke();
-    
+
     this.ctx.restore();
   }
 
   private drawMultiSelectionBox() {
     // Calculate bounding box for all selected shapes
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
-    this.selectedShapeIndices.forEach(index => {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
+    this.selectedShapeIndices.forEach((index) => {
       const shape = this.existingShapes[index];
       const bounds = this.getShapeBounds(shape);
       if (bounds) {
@@ -778,10 +853,15 @@ public duplicateSelected() {
     this.ctx.strokeStyle = "#3b82f6";
     this.ctx.lineWidth = 2 / this.scale;
     this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
-    
+
     const padding = 10 / this.scale;
-    this.ctx.strokeRect(minX - padding, minY - padding, maxX - minX + padding * 2, maxY - minY + padding * 2);
-    
+    this.ctx.strokeRect(
+      minX - padding,
+      minY - padding,
+      maxX - minX + padding * 2,
+      maxY - minY + padding * 2,
+    );
+
     this.ctx.restore();
   }
 
@@ -791,41 +871,55 @@ public duplicateSelected() {
     this.ctx.fillStyle = "rgba(59, 130, 246, 0.1)";
     this.ctx.lineWidth = 1 / this.scale;
     this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
-    
+
     const width = this.dragOffsetX - this.selectionStartX;
     const height = this.dragOffsetY - this.selectionStartY;
-    
-    this.ctx.fillRect(this.selectionStartX, this.selectionStartY, width, height);
-    this.ctx.strokeRect(this.selectionStartX, this.selectionStartY, width, height);
-    
+
+    this.ctx.fillRect(
+      this.selectionStartX,
+      this.selectionStartY,
+      width,
+      height,
+    );
+    this.ctx.strokeRect(
+      this.selectionStartX,
+      this.selectionStartY,
+      width,
+      height,
+    );
+
     this.ctx.restore();
   }
 
-  private getPathBounds(path: {x: number, y: number}[]): {minX: number, minY: number, maxX: number, maxY: number} | null {
+  private getPathBounds(
+    path: { x: number; y: number }[],
+  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
     if (path.length === 0) return null;
-    
+
     let minX = path[0].x;
     let minY = path[0].y;
     let maxX = path[0].x;
     let maxY = path[0].y;
-    
-    path.forEach(point => {
+
+    path.forEach((point) => {
       minX = Math.min(minX, point.x);
       minY = Math.min(minY, point.y);
       maxX = Math.max(maxX, point.x);
       maxY = Math.max(maxY, point.y);
     });
-    
+
     return { minX, minY, maxX, maxY };
   }
 
-  private getShapeBounds(shape: Shape): {x: number, y: number, width: number, height: number} | null {
+  private getShapeBounds(
+    shape: Shape,
+  ): { x: number; y: number; width: number; height: number } | null {
     if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
       return {
         x: Math.min(shape.x, shape.x + shape.width),
         y: Math.min(shape.y, shape.y + shape.height),
         width: Math.abs(shape.width),
-        height: Math.abs(shape.height)
+        height: Math.abs(shape.height),
       };
     } else if (shape.type === ShapeType.PENCIL && shape.path) {
       const bounds = this.getPathBounds(shape.path);
@@ -834,16 +928,20 @@ public duplicateSelected() {
         x: bounds.minX,
         y: bounds.minY,
         width: bounds.maxX - bounds.minX,
-        height: bounds.maxY - bounds.minY
+        height: bounds.maxY - bounds.minY,
       };
     }
     return null;
   }
 
-  private getHandleAtPoint(x: number, y: number, bounds: {x: number, y: number, width: number, height: number}): string | null {
+  private getHandleAtPoint(
+    x: number,
+    y: number,
+    bounds: { x: number; y: number; width: number; height: number },
+  ): string | null {
     const handleSize = 8 / this.scale;
     const rotateHandleDistance = 30 / this.scale;
-    
+
     const left = bounds.x;
     const right = bounds.x + bounds.width;
     const top = bounds.y;
@@ -854,34 +952,43 @@ public duplicateSelected() {
     // Check rotation handle (above top-center)
     const rotateX = centerX;
     const rotateY = top - rotateHandleDistance;
-    if (Math.abs(x - rotateX) < handleSize && Math.abs(y - rotateY) < handleSize) {
-      return 'rotate';
+    if (
+      Math.abs(x - rotateX) < handleSize &&
+      Math.abs(y - rotateY) < handleSize
+    ) {
+      return "rotate";
     }
 
     // Check corner handles
     const corners = [
-      { x: left, y: top, handle: 'nw' },
-      { x: right, y: top, handle: 'ne' },
-      { x: left, y: bottom, handle: 'sw' },
-      { x: right, y: bottom, handle: 'se' }
+      { x: left, y: top, handle: "nw" },
+      { x: right, y: top, handle: "ne" },
+      { x: left, y: bottom, handle: "sw" },
+      { x: right, y: bottom, handle: "se" },
     ];
 
     for (const corner of corners) {
-      if (Math.abs(x - corner.x) < handleSize && Math.abs(y - corner.y) < handleSize) {
+      if (
+        Math.abs(x - corner.x) < handleSize &&
+        Math.abs(y - corner.y) < handleSize
+      ) {
         return corner.handle;
       }
     }
 
     // Check edge handles
     const edges = [
-      { x: centerX, y: top, handle: 'n' },
-      { x: centerX, y: bottom, handle: 's' },
-      { x: left, y: centerY, handle: 'w' },
-      { x: right, y: centerY, handle: 'e' }
+      { x: centerX, y: top, handle: "n" },
+      { x: centerX, y: bottom, handle: "s" },
+      { x: left, y: centerY, handle: "w" },
+      { x: right, y: centerY, handle: "e" },
     ];
 
     for (const edge of edges) {
-      if (Math.abs(x - edge.x) < handleSize && Math.abs(y - edge.y) < handleSize) {
+      if (
+        Math.abs(x - edge.x) < handleSize &&
+        Math.abs(y - edge.y) < handleSize
+      ) {
         return edge.handle;
       }
     }
@@ -890,27 +997,39 @@ public duplicateSelected() {
   }
 
   private getCursorForHandle(handle: string): string {
-    const cursors: {[key: string]: string} = {
-      'nw': 'nw-resize',
-      'ne': 'ne-resize',
-      'sw': 'sw-resize',
-      'se': 'se-resize',
-      'n': 'n-resize',
-      's': 's-resize',
-      'e': 'e-resize',
-      'w': 'w-resize',
-      'rotate': 'grab'
+    const cursors: { [key: string]: string } = {
+      nw: "nw-resize",
+      ne: "ne-resize",
+      sw: "sw-resize",
+      se: "se-resize",
+      n: "n-resize",
+      s: "s-resize",
+      e: "e-resize",
+      w: "w-resize",
+      rotate: "grab",
     };
-    return cursors[handle] || 'default';
+    return cursors[handle] || "default";
   }
 
-  private calculateAngle(centerX: number, centerY: number, pointX: number, pointY: number): number {
+  private calculateAngle(
+    centerX: number,
+    centerY: number,
+    pointX: number,
+    pointY: number,
+  ): number {
     return Math.atan2(pointY - centerY, pointX - centerX);
   }
 
-  private resizeShape(shapeIndex: number, handle: string, newX: number, newY: number, startX: number, startY: number) {
+  private resizeShape(
+    shapeIndex: number,
+    handle: string,
+    newX: number,
+    newY: number,
+    startX: number,
+    startY: number,
+  ) {
     const shape = this.existingShapes[shapeIndex];
-    
+
     if (shape.type === ShapeType.RECT || shape.type === ShapeType.CIRCLE) {
       const deltaX = newX - startX;
       const deltaY = newY - startY;
@@ -921,38 +1040,38 @@ public duplicateSelected() {
       const originalHeight = shape.height;
 
       switch (handle) {
-        case 'nw':
+        case "nw":
           shape.x = originalX + deltaX;
           shape.y = originalY + deltaY;
           shape.width = originalWidth - deltaX;
           shape.height = originalHeight - deltaY;
           break;
-        case 'ne':
+        case "ne":
           shape.y = originalY + deltaY;
           shape.width = originalWidth + deltaX;
           shape.height = originalHeight - deltaY;
           break;
-        case 'sw':
+        case "sw":
           shape.x = originalX + deltaX;
           shape.width = originalWidth - deltaX;
           shape.height = originalHeight + deltaY;
           break;
-        case 'se':
+        case "se":
           shape.width = originalWidth + deltaX;
           shape.height = originalHeight + deltaY;
           break;
-        case 'n':
+        case "n":
           shape.y = originalY + deltaY;
           shape.height = originalHeight - deltaY;
           break;
-        case 's':
+        case "s":
           shape.height = originalHeight + deltaY;
           break;
-        case 'w':
+        case "w":
           shape.x = originalX + deltaX;
           shape.width = originalWidth - deltaX;
           break;
-        case 'e':
+        case "e":
           shape.width = originalWidth + deltaX;
           break;
       }
@@ -963,7 +1082,7 @@ public duplicateSelected() {
 
       const originalWidth = bounds.maxX - bounds.minX;
       const originalHeight = bounds.maxY - bounds.minY;
-      
+
       if (originalWidth === 0 || originalHeight === 0) return;
 
       const deltaX = newX - startX;
@@ -975,46 +1094,46 @@ public duplicateSelected() {
       let translateY = 0;
 
       switch (handle) {
-        case 'nw':
+        case "nw":
           scaleX = (originalWidth - deltaX) / originalWidth;
           scaleY = (originalHeight - deltaY) / originalHeight;
           translateX = deltaX;
           translateY = deltaY;
           break;
-        case 'ne':
+        case "ne":
           scaleX = (originalWidth + deltaX) / originalWidth;
           scaleY = (originalHeight - deltaY) / originalHeight;
           translateY = deltaY;
           break;
-        case 'sw':
+        case "sw":
           scaleX = (originalWidth - deltaX) / originalWidth;
           scaleY = (originalHeight + deltaY) / originalHeight;
           translateX = deltaX;
           break;
-        case 'se':
+        case "se":
           scaleX = (originalWidth + deltaX) / originalWidth;
           scaleY = (originalHeight + deltaY) / originalHeight;
           break;
-        case 'n':
+        case "n":
           scaleY = (originalHeight - deltaY) / originalHeight;
           translateY = deltaY;
           break;
-        case 's':
+        case "s":
           scaleY = (originalHeight + deltaY) / originalHeight;
           break;
-        case 'w':
+        case "w":
           scaleX = (originalWidth - deltaX) / originalWidth;
           translateX = deltaX;
           break;
-        case 'e':
+        case "e":
           scaleX = (originalWidth + deltaX) / originalWidth;
           break;
       }
 
       // Apply scaling and translation to path
-      shape.path = shape.path.map(point => ({
+      shape.path = shape.path.map((point) => ({
         x: bounds.minX + (point.x - bounds.minX) * scaleX + translateX,
-        y: bounds.minY + (point.y - bounds.minY) * scaleY + translateY
+        y: bounds.minY + (point.y - bounds.minY) * scaleY + translateY,
       }));
 
       // Update center
@@ -1026,14 +1145,25 @@ public duplicateSelected() {
     }
   }
 
-  private rotateShape(shapeIndex: number, centerX: number, centerY: number, currentX: number, currentY: number) {
+  private rotateShape(
+    shapeIndex: number,
+    centerX: number,
+    centerY: number,
+    currentX: number,
+    currentY: number,
+  ) {
     const shape = this.existingShapes[shapeIndex];
-    const currentAngle = this.calculateAngle(centerX, centerY, currentX, currentY);
+    const currentAngle = this.calculateAngle(
+      centerX,
+      centerY,
+      currentX,
+      currentY,
+    );
     const newRotation = currentAngle - this.initialRotation;
-    
+
     // Set rotation for all shape types
     shape.rotation = newRotation;
-    
+
     // For pencil shapes, ensure center is set
     if (shape.type === ShapeType.PENCIL) {
       shape.centerX = centerX;
@@ -1047,8 +1177,8 @@ public duplicateSelected() {
     const gridSize = 50;
     const startX = Math.floor(-this.offsetX / this.scale / gridSize) * gridSize;
     const startY = Math.floor(-this.offsetY / this.scale / gridSize) * gridSize;
-    const endX = startX + (this.canvas.width / this.scale) + gridSize;
-    const endY = startY + (this.canvas.height / this.scale) + gridSize;
+    const endX = startX + this.canvas.width / this.scale + gridSize;
+    const endY = startY + this.canvas.height / this.scale + gridSize;
 
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     this.ctx.lineWidth = 1 / this.scale;
@@ -1056,108 +1186,116 @@ public duplicateSelected() {
     // Vertical lines
   }
 
- // Replace the drawFill method in your Game.ts with this updated version
-// This fixes the fill opacity issue
+  // Replace the drawFill method in your Game.ts with this updated version
+  // This fixes the fill opacity issue
 
-private drawFill(x: number, y: number, width: number, height: number, bgColor: string, fillStyle: string, shapeType: ShapeType) {
-  this.ctx.save();
-  
-  // Set global opacity for fills (40% opacity = 0.4)
-  const fillOpacity = 0.25; // 25% opacity for subtle fill
-  
-  if (fillStyle === "solid") {
-    // Apply opacity to the fill color
-    let fillColor = bgColor;
-    
-    if (bgColor === "transparent") {
-      fillColor = `rgba(255, 255, 255, ${fillOpacity})`;
-    } else {
-      // Convert hex to rgba with opacity
-      const hex = bgColor.replace('#', '');
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
-    }
-    
-    this.ctx.fillStyle = fillColor;
-    if (shapeType === ShapeType.RECT) {
-      this.ctx.fillRect(x, y, width, height);
-    } else if (shapeType === ShapeType.CIRCLE) {
-      this.fillCircle(x, y, width, height);
-    }
-  } else if (fillStyle === "hatch") {
-    // Create hatch pattern with opacity
-    const patternCanvas = document.createElement('canvas');
-    const patternCtx = patternCanvas.getContext('2d')!;
-    patternCanvas.width = 8;
-    patternCanvas.height = 8;
-    
-    // Determine stroke color for pattern
-    let patternStroke = bgColor;
-    if (bgColor === "transparent") {
-      patternStroke = `rgba(255, 255, 255, ${fillOpacity})`;
-    } else {
-      const hex = bgColor.replace('#', '');
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      patternStroke = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
-    }
-    
-    patternCtx.strokeStyle = patternStroke;
-    patternCtx.lineWidth = 1;
-    patternCtx.beginPath();
-    patternCtx.moveTo(0, 8);
-    patternCtx.lineTo(8, 0);
-    patternCtx.stroke();
-    
-    const pattern = this.ctx.createPattern(patternCanvas, 'repeat');
-    if (pattern) {
-      this.ctx.fillStyle = pattern;
+  private drawFill(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    bgColor: string,
+    fillStyle: string,
+    shapeType: ShapeType,
+  ) {
+    this.ctx.save();
+
+    // Set global opacity for fills (40% opacity = 0.4)
+    const fillOpacity = 0.25; // 25% opacity for subtle fill
+
+    if (fillStyle === "solid") {
+      // Apply opacity to the fill color
+      let fillColor = bgColor;
+
+      if (bgColor === "transparent") {
+        fillColor = `rgba(255, 255, 255, ${fillOpacity})`;
+      } else {
+        // Convert hex to rgba with opacity
+        const hex = bgColor.replace("#", "");
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        fillColor = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+      }
+
+      this.ctx.fillStyle = fillColor;
       if (shapeType === ShapeType.RECT) {
         this.ctx.fillRect(x, y, width, height);
       } else if (shapeType === ShapeType.CIRCLE) {
         this.fillCircle(x, y, width, height);
       }
-    }
-  } else if (fillStyle === "dots") {
-    // Create dots pattern with opacity
-    const patternCanvas = document.createElement('canvas');
-    const patternCtx = patternCanvas.getContext('2d')!;
-    patternCanvas.width = 10;
-    patternCanvas.height = 10;
-    
-    // Determine fill color for pattern
-    let patternFill = bgColor;
-    if (bgColor === "transparent") {
-      patternFill = `rgba(255, 255, 255, ${fillOpacity})`;
-    } else {
-      const hex = bgColor.replace('#', '');
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      patternFill = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
-    }
-    
-    patternCtx.fillStyle = patternFill;
-    patternCtx.beginPath();
-    patternCtx.arc(5, 5, 1.5, 0, Math.PI * 2);
-    patternCtx.fill();
-    
-    const pattern = this.ctx.createPattern(patternCanvas, 'repeat');
-    if (pattern) {
-      this.ctx.fillStyle = pattern;
-      if (shapeType === ShapeType.RECT) {
-        this.ctx.fillRect(x, y, width, height);
-      } else if (shapeType === ShapeType.CIRCLE) {
-        this.fillCircle(x, y, width, height);
+    } else if (fillStyle === "hatch") {
+      // Create hatch pattern with opacity
+      const patternCanvas = document.createElement("canvas");
+      const patternCtx = patternCanvas.getContext("2d")!;
+      patternCanvas.width = 8;
+      patternCanvas.height = 8;
+
+      // Determine stroke color for pattern
+      let patternStroke = bgColor;
+      if (bgColor === "transparent") {
+        patternStroke = `rgba(255, 255, 255, ${fillOpacity})`;
+      } else {
+        const hex = bgColor.replace("#", "");
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        patternStroke = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+      }
+
+      patternCtx.strokeStyle = patternStroke;
+      patternCtx.lineWidth = 1;
+      patternCtx.beginPath();
+      patternCtx.moveTo(0, 8);
+      patternCtx.lineTo(8, 0);
+      patternCtx.stroke();
+
+      const pattern = this.ctx.createPattern(patternCanvas, "repeat");
+      if (pattern) {
+        this.ctx.fillStyle = pattern;
+        if (shapeType === ShapeType.RECT) {
+          this.ctx.fillRect(x, y, width, height);
+        } else if (shapeType === ShapeType.CIRCLE) {
+          this.fillCircle(x, y, width, height);
+        }
+      }
+    } else if (fillStyle === "dots") {
+      // Create dots pattern with opacity
+      const patternCanvas = document.createElement("canvas");
+      const patternCtx = patternCanvas.getContext("2d")!;
+      patternCanvas.width = 10;
+      patternCanvas.height = 10;
+
+      // Determine fill color for pattern
+      let patternFill = bgColor;
+      if (bgColor === "transparent") {
+        patternFill = `rgba(255, 255, 255, ${fillOpacity})`;
+      } else {
+        const hex = bgColor.replace("#", "");
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        patternFill = `rgba(${r}, ${g}, ${b}, ${fillOpacity})`;
+      }
+
+      patternCtx.fillStyle = patternFill;
+      patternCtx.beginPath();
+      patternCtx.arc(5, 5, 1.5, 0, Math.PI * 2);
+      patternCtx.fill();
+
+      const pattern = this.ctx.createPattern(patternCanvas, "repeat");
+      if (pattern) {
+        this.ctx.fillStyle = pattern;
+        if (shapeType === ShapeType.RECT) {
+          this.ctx.fillRect(x, y, width, height);
+        } else if (shapeType === ShapeType.CIRCLE) {
+          this.fillCircle(x, y, width, height);
+        }
       }
     }
+
+    this.ctx.restore();
   }
-  
-  this.ctx.restore();
-}
 
   private fillCircle(x: number, y: number, width: number, height: number) {
     const kappa = 0.5522848;
@@ -1177,9 +1315,9 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     this.ctx.fill();
   }
 
-  private drawPath(path: {x: number, y: number}[]) {
+  private drawPath(path: { x: number; y: number }[]) {
     if (path.length < 2) return;
-    
+
     this.ctx.beginPath();
     this.ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
@@ -1203,22 +1341,29 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     // Selection mode
     if (this.selectedTool === ShapeType.SELECT) {
       // Check if clicking on a handle of selected shape (only for single selection)
-      if (this.selectedShapeIndex !== null && this.selectedShapeIndices.size === 0) {
+      if (
+        this.selectedShapeIndex !== null &&
+        this.selectedShapeIndices.size === 0
+      ) {
         const shape = this.existingShapes[this.selectedShapeIndex];
         const bounds = this.getShapeBounds(shape);
-        
+
         if (bounds) {
           const handle = this.getHandleAtPoint(coords.x, coords.y, bounds);
-          
-          if (handle === 'rotate') {
+
+          if (handle === "rotate") {
             this.isRotating = true;
-            const centerX = shape.type === ShapeType.PENCIL && shape.centerX !== undefined 
-              ? shape.centerX 
-              : bounds.x + bounds.width / 2;
-            const centerY = shape.type === ShapeType.PENCIL && shape.centerY !== undefined 
-              ? shape.centerY 
-              : bounds.y + bounds.height / 2;
-            this.initialRotation = this.calculateAngle(centerX, centerY, coords.x, coords.y) - (shape.rotation || 0);
+            const centerX =
+              shape.type === ShapeType.PENCIL && shape.centerX !== undefined
+                ? shape.centerX
+                : bounds.x + bounds.width / 2;
+            const centerY =
+              shape.type === ShapeType.PENCIL && shape.centerY !== undefined
+                ? shape.centerY
+                : bounds.y + bounds.height / 2;
+            this.initialRotation =
+              this.calculateAngle(centerX, centerY, coords.x, coords.y) -
+              (shape.rotation || 0);
             this.canvas.style.cursor = "grabbing";
             return;
           } else if (handle) {
@@ -1231,10 +1376,10 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
           }
         }
       }
-      
+
       // Try to select a shape
       const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
-      
+
       if (shapeIndex !== null) {
         // Multi-selection with Ctrl/Cmd key
         if (e.ctrlKey || e.metaKey) {
@@ -1256,7 +1401,7 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
             this.selectedShapeIndex = shapeIndex;
           }
         }
-        
+
         // Start dragging for selected shapes
         this.isDragging = true;
         this.dragOffsetX = coords.x;
@@ -1286,9 +1431,9 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     this.lastY = this.startY;
 
     if (this.selectedTool === ShapeType.PENCIL) {
-      this.currentPath = [{x: this.startX, y: this.startY}];
+      this.currentPath = [{ x: this.startX, y: this.startY }];
     } else if (this.selectedTool === ShapeType.Eraser) {
-      this.currentPath = [{x: this.startX, y: this.startY}];
+      this.currentPath = [{ x: this.startX, y: this.startY }];
     }
   };
 
@@ -1302,36 +1447,40 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     // Handle end of selection box
     if (this.isSelectionBoxActive) {
       this.isSelectionBoxActive = false;
-      
+
       // Find all shapes within selection box
       const coords = this.screenToCanvas(e.clientX, e.clientY);
       const minX = Math.min(this.selectionStartX, coords.x);
       const maxX = Math.max(this.selectionStartX, coords.x);
       const minY = Math.min(this.selectionStartY, coords.y);
       const maxY = Math.max(this.selectionStartY, coords.y);
-      
+
       this.selectedShapeIndices.clear();
       this.existingShapes.forEach((shape, index) => {
         if (shape.type === ShapeType.Eraser) return;
-        
+
         const bounds = this.getShapeBounds(shape);
         if (bounds) {
           const shapeCenterX = bounds.x + bounds.width / 2;
           const shapeCenterY = bounds.y + bounds.height / 2;
-          
-          if (shapeCenterX >= minX && shapeCenterX <= maxX && 
-              shapeCenterY >= minY && shapeCenterY <= maxY) {
+
+          if (
+            shapeCenterX >= minX &&
+            shapeCenterX <= maxX &&
+            shapeCenterY >= minY &&
+            shapeCenterY <= maxY
+          ) {
             this.selectedShapeIndices.add(index);
           }
         }
       });
-      
+
       if (this.selectedShapeIndices.size === 1) {
         this.selectedShapeIndex = Array.from(this.selectedShapeIndices)[0];
       } else if (this.selectedShapeIndices.size > 1) {
         this.selectedShapeIndex = null;
       }
-      
+
       this.clearCanvas();
       return;
     }
@@ -1341,10 +1490,10 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
       this.isResizing = false;
       this.resizeHandle = null;
       this.canvas.style.cursor = "default";
-      
+
       // Save to history after resizing
       this.saveToHistory();
-      
+
       // Broadcast the updated shape
       const resizedShape = this.existingShapes[this.selectedShapeIndex];
       this.socket.send(
@@ -1364,10 +1513,10 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     if (this.isRotating && this.selectedShapeIndex !== null) {
       this.isRotating = false;
       this.canvas.style.cursor = "default";
-      
+
       // Save to history after rotating
       this.saveToHistory();
-      
+
       // Broadcast the updated shape
       const rotatedShape = this.existingShapes[this.selectedShapeIndex];
       this.socket.send(
@@ -1387,10 +1536,10 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     if (this.isDragging) {
       this.isDragging = false;
       this.canvas.style.cursor = "default";
-      
+
       // Save to history after moving
       this.saveToHistory();
-      
+
       // Broadcast the updated state
       this.socket.send(
         JSON.stringify({
@@ -1443,9 +1592,13 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     } else if (this.selectedTool === ShapeType.PENCIL) {
       // Calculate center for pencil shape
       const bounds = this.getPathBounds(this.currentPath);
-      const centerX = bounds ? bounds.minX + (bounds.maxX - bounds.minX) / 2 : this.startX;
-      const centerY = bounds ? bounds.minY + (bounds.maxY - bounds.minY) / 2 : this.startY;
-      
+      const centerX = bounds
+        ? bounds.minX + (bounds.maxX - bounds.minX) / 2
+        : this.startX;
+      const centerY = bounds
+        ? bounds.minY + (bounds.maxY - bounds.minY) / 2
+        : this.startY;
+
       shape = {
         type: ShapeType.PENCIL,
         path: this.currentPath,
@@ -1504,23 +1657,42 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     if (this.isRotating && this.selectedShapeIndex !== null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
       const bounds = this.getShapeBounds(shape);
-      
+
       if (bounds) {
-        const centerX = shape.type === ShapeType.PENCIL && shape.centerX !== undefined 
-          ? shape.centerX 
-          : bounds.x + bounds.width / 2;
-        const centerY = shape.type === ShapeType.PENCIL && shape.centerY !== undefined 
-          ? shape.centerY 
-          : bounds.y + bounds.height / 2;
-        this.rotateShape(this.selectedShapeIndex, centerX, centerY, coords.x, coords.y);
+        const centerX =
+          shape.type === ShapeType.PENCIL && shape.centerX !== undefined
+            ? shape.centerX
+            : bounds.x + bounds.width / 2;
+        const centerY =
+          shape.type === ShapeType.PENCIL && shape.centerY !== undefined
+            ? shape.centerY
+            : bounds.y + bounds.height / 2;
+        this.rotateShape(
+          this.selectedShapeIndex,
+          centerX,
+          centerY,
+          coords.x,
+          coords.y,
+        );
         this.clearCanvas();
       }
       return;
     }
 
     // Handle resizing
-    if (this.isResizing && this.selectedShapeIndex !== null && this.resizeHandle) {
-      this.resizeShape(this.selectedShapeIndex, this.resizeHandle, coords.x, coords.y, this.dragOffsetX, this.dragOffsetY);
+    if (
+      this.isResizing &&
+      this.selectedShapeIndex !== null &&
+      this.resizeHandle
+    ) {
+      this.resizeShape(
+        this.selectedShapeIndex,
+        this.resizeHandle,
+        coords.x,
+        coords.y,
+        this.dragOffsetX,
+        this.dragOffsetY,
+      );
       this.dragOffsetX = coords.x;
       this.dragOffsetY = coords.y;
       this.clearCanvas();
@@ -1531,29 +1703,32 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
     if (this.isDragging) {
       const deltaX = coords.x - this.dragOffsetX;
       const deltaY = coords.y - this.dragOffsetY;
-      
+
       // Move all selected shapes
       if (this.selectedShapeIndices.size > 0) {
-        this.selectedShapeIndices.forEach(index => {
+        this.selectedShapeIndices.forEach((index) => {
           this.moveShape(index, deltaX, deltaY);
         });
       } else if (this.selectedShapeIndex !== null) {
         this.moveShape(this.selectedShapeIndex, deltaX, deltaY);
       }
-      
+
       this.dragOffsetX = coords.x;
       this.dragOffsetY = coords.y;
-      
+
       this.clearCanvas();
       return;
     }
 
     // Update cursor in selection mode
     if (this.selectedTool === ShapeType.SELECT && !this.clicked) {
-      if (this.selectedShapeIndex !== null && this.selectedShapeIndices.size === 0) {
+      if (
+        this.selectedShapeIndex !== null &&
+        this.selectedShapeIndices.size === 0
+      ) {
         const shape = this.existingShapes[this.selectedShapeIndex];
         const bounds = this.getShapeBounds(shape);
-        
+
         if (bounds) {
           const handle = this.getHandleAtPoint(coords.x, coords.y, bounds);
           if (handle) {
@@ -1562,7 +1737,7 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
           }
         }
       }
-      
+
       const shapeIndex = this.findShapeAtPoint(coords.x, coords.y);
       this.canvas.style.cursor = shapeIndex !== null ? "pointer" : "default";
       return;
@@ -1580,12 +1755,20 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
       this.ctx.scale(this.scale, this.scale);
       this.ctx.strokeStyle = this.strokeColor;
       this.ctx.lineWidth = this.strokeWidth / this.scale;
-      
+
       // Draw fill preview
       if (this.fillStyle !== "none") {
-        this.drawFill(this.startX, this.startY, width, height, this.backgroundColor, this.fillStyle, ShapeType.RECT);
+        this.drawFill(
+          this.startX,
+          this.startY,
+          width,
+          height,
+          this.backgroundColor,
+          this.fillStyle,
+          ShapeType.RECT,
+        );
       }
-      
+
       this.ctx.strokeRect(this.startX, this.startY, width, height);
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.CIRCLE) {
@@ -1595,16 +1778,24 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
       this.ctx.scale(this.scale, this.scale);
       this.ctx.strokeStyle = this.strokeColor;
       this.ctx.lineWidth = this.strokeWidth / this.scale;
-      
+
       // Draw fill preview
       if (this.fillStyle !== "none") {
-        this.drawFill(this.startX, this.startY, width, height, this.backgroundColor, this.fillStyle, ShapeType.CIRCLE);
+        this.drawFill(
+          this.startX,
+          this.startY,
+          width,
+          height,
+          this.backgroundColor,
+          this.fillStyle,
+          ShapeType.CIRCLE,
+        );
       }
-      
+
       this.drawCircle(this.startX, this.startY, width, height);
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.PENCIL) {
-      this.currentPath.push({x: coords.x, y: coords.y});
+      this.currentPath.push({ x: coords.x, y: coords.y });
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
@@ -1619,7 +1810,7 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
       this.ctx.stroke();
       this.ctx.restore();
     } else if (this.selectedTool === ShapeType.Eraser) {
-      this.currentPath.push({x: coords.x, y: coords.y});
+      this.currentPath.push({ x: coords.x, y: coords.y });
       this.ctx.save();
       this.ctx.translate(this.offsetX, this.offsetY);
       this.ctx.scale(this.scale, this.scale);
@@ -1636,7 +1827,7 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
 
   wheelHandler = (e: WheelEvent) => {
     e.preventDefault();
-    
+
     // Ctrl + Wheel = Zoom
     if (e.ctrlKey || e.metaKey) {
       const zoomIntensity = 0.1;
@@ -1659,7 +1850,9 @@ private drawFill(x: number, y: number, width: number, height: number, bgColor: s
   };
 
   initZoomHandlers() {
-    this.canvas.addEventListener("wheel", this.wheelHandler, { passive: false });
+    this.canvas.addEventListener("wheel", this.wheelHandler, {
+      passive: false,
+    });
   }
 
   initMouseHandlers() {

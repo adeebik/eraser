@@ -29,12 +29,14 @@ export const createRoom = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({
+    res.status(200).json({
+      msg:"Room Created Successfully",
       roomId: room.id,
       name: room.slug,
     });
   } catch (error) {
     res.status(411).json({
+      err:"duplicateEntry",
       msg: "Room already Exists",
     });
     console.log("Error creating room:", error);

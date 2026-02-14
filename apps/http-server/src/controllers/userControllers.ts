@@ -1,4 +1,4 @@
-import { authSchema } from "@repo/common/zod";
+import { signup, singin } from "@repo/common/zod";
 import { prisma } from "@repo/db";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/config";
 
 export const signinController = async (req: Request, res: Response) => {
-  const parseData = authSchema.safeParse(req.body);
+  const parseData = singin.safeParse(req.body);
 
   if (!parseData.success) {
     return res.status(403).json({
@@ -62,7 +62,7 @@ export const signinController = async (req: Request, res: Response) => {
 };
 
 export const signupController = async (req: Request, res: Response) => {
-  const parseData = authSchema.safeParse(req.body);
+  const parseData = signup.safeParse(req.body);
 
   if (!parseData.success) {
     return res.status(403).json({
@@ -101,4 +101,10 @@ export const signupController = async (req: Request, res: Response) => {
       });
     }
   }
+};
+
+export const logoutController = async (req: Request, res: Response) => {
+  return res.status(200).json({
+    msg: "Logged out successfully",
+  });
 };

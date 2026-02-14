@@ -47,7 +47,7 @@ export function RoomCard({
         </div>
       </div>
 
-      <div className="mt-8 flex items-center gap-3">
+      <div className="mt-8 flex items-center gap-4">
         <Button 
           variant="pastel-green" 
           className="flex-1 py-2 hover:bg-green-300"
