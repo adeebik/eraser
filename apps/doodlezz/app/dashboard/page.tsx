@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [token, setToken] = useState("");
-  const [alert,setAlert] = useState<AlertData | null>(null);
+  const [alert, setAlert] = useState<AlertData | null>(null);
 
   const roomNameRef = useRef<HTMLInputElement | null>(null);
 
@@ -100,7 +100,8 @@ export default function DashboardPage() {
         setAlert({
           type: "error",
           title: "Failed",
-          message: response.data?.msg || "Something went wrong. Please try again.",
+          message:
+            response.data?.msg || "Something went wrong. Please try again.",
         });
       } else {
         setAlert({
@@ -128,7 +129,8 @@ export default function DashboardPage() {
     setAlert({
       type: "delete",
       title: "Delete Room",
-      message: "Are you sure you want to delete this room? This action cannot be undone.",
+      message:
+        "Are you sure you want to delete this room? This action cannot be undone.",
       roomId: id,
       onConfirm: async () => {
         try {
@@ -137,13 +139,13 @@ export default function DashboardPage() {
             { roomId: id },
             { headers: { Authorization: `Bearer ${token}` } },
           );
-          
+
           if (response.data.msg === "Room deleted successfully") {
             setAlert({
               type: "success",
               title: "Deleted",
               message: "Room has been deleted successfully.",
-              roomId: id
+              roomId: id,
             });
             getDashboard();
             setTimeout(() => setAlert(null), 2000);
@@ -152,7 +154,7 @@ export default function DashboardPage() {
               type: "error",
               title: "Error",
               message: response.data.msg || "Failed to delete room.",
-              roomId: id
+              roomId: id,
             });
           }
         } catch (error: any) {
@@ -160,17 +162,64 @@ export default function DashboardPage() {
             type: "error",
             title: "Error",
             message: "An unexpected error occurred.",
-            roomId: id
+            roomId: id,
           });
         }
       },
-      onCancel: () => setAlert(null)
+      onCancel: () => setAlert(null),
+    });
+  };
+
+  const handleLeave = async (id: string) => {
+    setAlert({
+      type: "delete",
+      title: "Leave Room",
+      message: "Are you sure you want to Leave this room?",
+      roomId: id,
+      onConfirm: async () => {
+        try {
+          const res = await axios.post(
+            "room/leave",
+            { roomId: id },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          if (res.data.msg === "Left room successfully") {
+            setAlert({
+              type: "success",
+              title: "Deleted",
+              message: "Room has been deleted successfully.",
+              roomId: id,
+            });
+            getDashboard();
+            setTimeout(() => setAlert(null), 2000);
+          } else {
+            setAlert({
+              type: "error",
+              title: "Error",
+              message: res.data.msg || "Failed to delete room.",
+              roomId: id,
+            });
+          }
+        } catch (error: any) {
+          setAlert({
+            type: "error",
+            title: "Error",
+            message: "An unexpected error occurred.",
+            roomId: id,
+          });
+        }
+      },
+      onCancel: () => setAlert(null),
     });
   };
 
   const handleJoinRoom = (link: string) => {
     console.log("Joining room:", link);
-    // Logic to join room would go here
   };
 
   if (loading) {
@@ -195,10 +244,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen w-full bg-[#f9f7f2] p-4 font-sans text-[#1a1a1a] grainy md:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        {/* Navbar */}
         <nav className="flex items-center justify-between rounded-xl border-2 border-black bg-white px-6 py-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div className="flex items-center gap-2">
-            {/* Simple Logo Placeholder */}
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-black text-white font-bold text-xl">
               D
             </div>
@@ -220,7 +267,6 @@ export default function DashboardPage() {
           </div>
         </nav>
 
-        {/* Actions & Filters */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-4">
             <Button
@@ -244,7 +290,6 @@ export default function DashboardPage() {
 
         <div className="h-px w-full bg-black/10" />
 
-        {/* Room Grid */}
         <div className="space-y-6">
           <h2 className="text-2xl font-black">Your Dashboard</h2>
 
@@ -253,17 +298,17 @@ export default function DashboardPage() {
               <RoomCard
                 key={room.id}
                 onDelete={handleDelete}
+                onLeave={handleLeave}
                 id={room.id}
                 slug={room.slug}
                 adminName={room.admin.name}
                 createdAt={getTimeAgo(new Date(room.createdAt))}
                 isAdmin={room.isAdmin}
                 alert={alert}
-                setAlert = {setAlert}
+                setAlert={setAlert}
               />
             ))}
 
-            {/* Add New Room Card (Visual Prompt) */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/50 p-6 text-gray-400 transition-all hover:border-black hover:text-black hover:bg-white min-h-[220px] shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
@@ -281,7 +326,7 @@ export default function DashboardPage() {
 
       <CreateRoomModal
         alert={alert}
-        setAlert = {setAlert}
+        setAlert={setAlert}
         ref={roomNameRef}
         createHandle={createHandle}
         isOpen={isCreateModalOpen}
