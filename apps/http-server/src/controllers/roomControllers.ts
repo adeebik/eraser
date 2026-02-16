@@ -100,8 +100,7 @@ export const joinRoom = async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      //joi
-      return existing;
+      return res.status(404).json({ msg: "Already joined" });
     }
 
     await prisma.members.create({
@@ -111,12 +110,12 @@ export const joinRoom = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({
-      msg: "joined",
+    res.status(200).json({
+      msg: "Joined room successfully",
     });
   } catch (error) {
     res.json({
-      msg: "some error",
+      msg: "Error",
     });
   }
 };

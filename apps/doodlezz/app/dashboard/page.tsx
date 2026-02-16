@@ -39,12 +39,15 @@ export default function DashboardPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [sharingRoom, setSharingRoom] = useState<{id: string, slug: string, isAdmin: boolean, shared: string | null} | null>(null);
+  const [sharingRoom, setSharingRoom] = useState<{
+    id: string;
+    slug: string;
+    isAdmin: boolean;
+    shared: string | null;
+  } | null>(null);
   const [token, setToken] = useState("");
   const [alert, setAlert] = useState<AlertData | null>(null);
-
   const roomNameRef = useRef<HTMLInputElement | null>(null);
-
   const router = useRouter();
 
   useEffect(() => {
@@ -89,6 +92,7 @@ export default function DashboardPage() {
           type: "error",
           title: "Required",
           message: "Please enter a room name.",
+          context: "create",
         });
         return;
       }
@@ -105,12 +109,14 @@ export default function DashboardPage() {
           title: "Failed",
           message:
             response.data?.msg || "Something went wrong. Please try again.",
+          context: "create",
         });
       } else {
         setAlert({
           type: "success",
           title: "Success",
           message: "Room created successfully!",
+          context: "create",
         });
         if (roomNameRef.current) roomNameRef.current.value = "";
         getDashboard();
@@ -124,6 +130,7 @@ export default function DashboardPage() {
         type: "error",
         title: "Error",
         message: error.response?.data?.msg || "An unexpected error occurred.",
+        context: "create",
       });
     }
   };
@@ -135,6 +142,7 @@ export default function DashboardPage() {
       message:
         "Are you sure you want to delete this room? This action cannot be undone.",
       roomId: id,
+      context: "room",
       onConfirm: async () => {
         try {
           const response = await axios.post(
@@ -149,6 +157,7 @@ export default function DashboardPage() {
               title: "Deleted",
               message: "Room has been deleted successfully.",
               roomId: id,
+              context: "room",
             });
             getDashboard();
             setTimeout(() => setAlert(null), 2000);
@@ -158,6 +167,7 @@ export default function DashboardPage() {
               title: "Error",
               message: response.data.msg || "Failed to delete room.",
               roomId: id,
+              context: "room",
             });
           }
         } catch (error: any) {
@@ -166,6 +176,7 @@ export default function DashboardPage() {
             title: "Error",
             message: "An unexpected error occurred.",
             roomId: id,
+            context: "room",
           });
         }
       },
@@ -179,6 +190,7 @@ export default function DashboardPage() {
       title: "Leave Room",
       message: "Are you sure you want to Leave this room?",
       roomId: id,
+      context: "room",
       onConfirm: async () => {
         try {
           const res = await axios.post(
@@ -197,6 +209,7 @@ export default function DashboardPage() {
               title: "Deleted",
               message: "Room has been deleted successfully.",
               roomId: id,
+              context: "room",
             });
             getDashboard();
             setTimeout(() => setAlert(null), 2000);
@@ -206,6 +219,7 @@ export default function DashboardPage() {
               title: "Error",
               message: res.data.msg || "Failed to delete room.",
               roomId: id,
+              context: "room",
             });
           }
         } catch (error: any) {
@@ -214,6 +228,7 @@ export default function DashboardPage() {
             title: "Error",
             message: "An unexpected error occurred.",
             roomId: id,
+            context: "room",
           });
         }
       },
@@ -221,14 +236,15 @@ export default function DashboardPage() {
     });
   };
 
-  const handleJoinRoom = (link: string) => {
-    console.log("Joining room:", link);
-  };
-
   const handleShare = (id: string) => {
-    const room = roomsInfo.find(r => r.id === id);
+    const room = roomsInfo.find((r) => r.id === id);
     if (room) {
-      setSharingRoom({ id: room.id, slug: room.slug, isAdmin: room.isAdmin, shared: room.shared || null });
+      setSharingRoom({
+        id: room.id,
+        slug: room.slug,
+        isAdmin: room.isAdmin,
+        shared: room.shared || null,
+      });
       setIsShareModalOpen(true);
     }
   };
@@ -239,21 +255,73 @@ export default function DashboardPage() {
       const response = await axios.post(
         `${BE_URL}/room/share`,
         { enableShare: true, roomId: sharingRoom.id },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      
+
       const newSharedLink = response.data.sharedLink;
-      
-      // Update local state
-      setRoomsInfo(prev => prev.map(r => 
-        r.id === sharingRoom.id ? { ...r, shared: newSharedLink } : r
-      ));
-      
-      setSharingRoom(prev => prev ? { ...prev, shared: newSharedLink } : null);
-      
+
+      setRoomsInfo((prev) =>
+        prev.map((r) =>
+          r.id === sharingRoom.id ? { ...r, shared: newSharedLink } : r,
+        ),
+      );
+
+      setSharingRoom((prev) =>
+        prev ? { ...prev, shared: newSharedLink } : null,
+      );
+
       return newSharedLink;
     } catch (error) {
       console.error("Error generating share link:", error);
+    }
+  };
+
+  const handleJoinRoom = async (code: string) => {
+    if (!code) {
+      setAlert({
+        type: "error",
+        title: "Required",
+        message: "Please enter a room code.",
+        context: "join",
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(
+        `${BE_URL}/room/join/${code}`,
+        { link: code },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (res.data.msg === "Joined room successfully") {
+        setAlert({
+          type: "success",
+          title: "Joined",
+          message: "You have joined the room successfully.",
+          context: "join",
+        });
+        getDashboard();
+        setTimeout(() => {
+          setIsJoinModalOpen(false);
+          setAlert(null);
+        }, 1500);
+      } else {
+        setAlert({
+          type: "error",
+          title: "Error",
+          message: res.data.msg || "Failed to join room.",
+          context: "join",
+        });
+      }
+    } catch (error: any) {
+      setAlert({
+        type: "error",
+        title: "Error",
+        message: error.response?.data?.msg || "An unexpected error occurred.",
+        context: "join",
+      });
     }
   };
 
@@ -373,6 +441,8 @@ export default function DashboardPage() {
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onJoin={handleJoinRoom}
+        alert={alert}
+        setAlert={setAlert}
       />
 
       {sharingRoom && (

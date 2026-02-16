@@ -10,13 +10,14 @@ export interface AlertData {
   type: "success" | "error" | "info" | "delete";
   title: string;
   message: string;
+  context?: "create" | "join" | "room";
   roomId?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
 }
 
 interface CreateRoomModalProps {
-  alert : AlertData | null;
+  alert: AlertData | null;
   setAlert: (alert: AlertData | null) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -51,16 +52,16 @@ export function CreateRoomModal({
           Start a new drawing session! Give it a name.
         </p>
 
-        {alert && (
-            <div className="mb-6">
-              <Alert
-                type={alert.type}
-                title={alert.title}
-                message={alert.message}
-                onClose={() => setAlert(null)}
-              />
-            </div>
-          )}
+        {alert && alert.context === "create" && (
+          <div className="mb-6">
+            <Alert
+              type={alert.type}
+              title={alert.title}
+              message={alert.message}
+              onClose={() => setAlert(null)}
+            />
+          </div>
+        )}
 
         <div className="space-y-6">
           <div className="text-left space-y-2">

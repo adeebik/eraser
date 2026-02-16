@@ -58,7 +58,7 @@ export function RoomCard({
         </div>
       </div>
 
-      {alert && (!alert.roomId || alert.roomId === id) && (
+      {alert && alert.context === "room" && (!alert.roomId || alert.roomId === id) && (
         <div className="mb-6">
           <Alert
             type={alert.type}
