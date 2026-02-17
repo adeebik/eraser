@@ -14,7 +14,7 @@ export default function Signin() {
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
-  const nameRef = useRef<HTMLInputElement | null>(null);
+
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "info";
     title: string;
@@ -24,9 +24,9 @@ export default function Signin() {
   const handleLogin = async () => {
     const email = emailRef.current?.value;
     const password = passwordRef.current?.value;
-    const name = nameRef.current?.value;
 
-    if (!email || !password || !name) {
+
+    if (!email || !password ) {
       setAlert({
         type: "error",
         title: "Missing Fields",
@@ -39,7 +39,6 @@ export default function Signin() {
       const response = await axios.post(`${BE_URL}/user/signin`, {
         email,
         password,
-        name,
       });
 
       if (response.status === 200) {
@@ -96,13 +95,6 @@ export default function Signin() {
             </div>
           )}
           <div className="space-y-6">
-            <Input
-              ref={nameRef}
-              label="Name"
-              placeholder="doodlezz"
-              type="text"
-              required
-            />
 
             <Input
               ref={emailRef}

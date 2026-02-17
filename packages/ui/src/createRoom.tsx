@@ -3,27 +3,36 @@
 import { X } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
-import { useRef } from "react";
-import { AlertData } from "./createRoom";
 import { Alert } from "./alert";
+import { RefObject } from "react";
 
-interface JoinRoomModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onJoin: (link: string) => void;
-  alert: AlertData | null;
-  setAlert: (alert: AlertData | null) => void;
+export interface AlertData {
+  type: "success" | "error" | "info" | "delete";
+  title: string;
+  message: string;
+  context?: "create" | "join" | "room";
+  roomId?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
 }
 
-export function JoinRoomModal({
-  isOpen,
-  onClose,
-  onJoin,
+interface CreateRoomModalProps {
+  alert: AlertData | null;
+  setAlert: (alert: AlertData | null) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  createHandle: () => void;
+  ref: RefObject<HTMLInputElement | null>;
+}
+
+export function CreateRoomModal({
   alert,
   setAlert,
-}: JoinRoomModalProps) {
-  const joinRoomRef = useRef<HTMLInputElement | null>(null);
-
+  isOpen,
+  onClose,
+  createHandle,
+  ref,
+}: CreateRoomModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -38,12 +47,12 @@ export function JoinRoomModal({
           </button>
         </div>
 
-        <h2 className="mb-2 text-2xl font-black">Join Room</h2>
+        <h2 className="mb-2 text-2xl font-black">Create New Room</h2>
         <p className="mb-8 text-gray-500">
-          Enter the invite code to join an existing session.
+          Start a new drawing session! Give it a name.
         </p>
 
-        {alert && alert.context === "join" && (
+        {alert && alert.context === "create" && (
           <div className="mb-6">
             <Alert
               type={alert.type}
@@ -57,30 +66,30 @@ export function JoinRoomModal({
         <div className="space-y-6">
           <div className="text-left space-y-2">
             <Input
-              ref={joinRoomRef}
+              ref={ref}
               autoFocus
               type="text"
-              placeholder="14 Digit Room Code"
-              label="Invite Code"
+              placeholder="e.g. Design Sync, Wireframes..."
+              label="Room Name"
             />
           </div>
 
-          <div className="flex gap-4 pt-2">
+          <div className="flex justify-between gap-8 pt-2">
             <Button
               type="button"
               variant="secondary"
-              className="flex-1 justify-center border-2 border-black rounded-xl hover:bg-gray-100 font-bold"
+              className="flex-1 w-full justify-center border-2 border-black rounded-xl hover:bg-gray-100 font-bold"
               onClick={onClose}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => onJoin(joinRoomRef.current?.value || "")}
+              onClick={createHandle}
               type="submit"
-              variant="pastel-orange"
-              className="flex-1 justify-center border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
+              variant="pastel-green"
+              className="flex-1 w-full justify-center border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
             >
-              Join Room
+              Create Room
             </Button>
           </div>
         </div>

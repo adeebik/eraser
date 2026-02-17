@@ -6,8 +6,9 @@ interface ButtonProps {
   children: ReactNode;
   className?: string;
   variant?: "primary" | "secondary" | "pastel-red" | "pastel-orange" | "pastel-green";
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit" | "reset";
+  disabled?: boolean;
 }
 
 export const Button = ({ 
@@ -15,7 +16,8 @@ export const Button = ({
   className = "", 
   variant = "primary",
   onClick,
-  type = "button"
+  type = "button",
+  disabled = false
 }: ButtonProps) => {
   const baseStyles = "inline-flex items-center justify-center px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 border-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-[0px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] gap-2";
   
@@ -30,7 +32,8 @@ export const Button = ({
   return (
     <button
       type={type}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      disabled={disabled}
+      className={`${baseStyles} ${variants[variant]} ${disabled ? "opacity-50 cursor-not-allowed grayscale" : ""} ${className}`}
       onClick={onClick}
     >
       {children}

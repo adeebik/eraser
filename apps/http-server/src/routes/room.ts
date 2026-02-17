@@ -11,16 +11,16 @@ import {
 
 const roomRouter: Router = Router();
 
-roomRouter.post("/room/create", auth, createRoom);
+roomRouter.post("/create", auth, createRoom);
 
-roomRouter.post("/room/share", auth, shareRoom);
+roomRouter.post("/share", auth, shareRoom);
 
-roomRouter.post("/room/join/:link", auth, joinRoom);
+roomRouter.post("/join/:link", auth, joinRoom);
 
-roomRouter.post("/room/leave", auth, leaveRoom);
+roomRouter.post("/leave", auth, leaveRoom);
 
-roomRouter.post("/room/delete", auth, deleteRoom);
+roomRouter.post("/delete", auth, deleteRoom);
 
-roomRouter.get("/room/allRooms", auth, allRooms);
+roomRouter.get("/allRooms", auth, allRooms);
 
 export default roomRouter;
