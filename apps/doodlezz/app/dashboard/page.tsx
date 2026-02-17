@@ -194,7 +194,7 @@ export default function DashboardPage() {
       onConfirm: async () => {
         try {
           const res = await axios.post(
-            "room/leave",
+            `${BE_URL}/room/leave`,
             { roomId: id },
             {
               headers: {
