@@ -33,7 +33,7 @@ export function RoomCard({
           <div className="mt-2 flex items-center gap-2">
             <span className="text-sm font-bold opacity-70">By <span className="text-black opacity-100">{adminName}</span></span>
             {isAdmin && (
-              <span className="inline-flex items-center rounded-md border border-black bg-yellow-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+              <span className="inline-flex items-center rounded-md border border-black bg-green-200 px-3 py-1.5  text-[10px] font-black uppercase tracking-tighter shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                 Admin
               </span>
             )}
@@ -50,7 +50,7 @@ export function RoomCard({
       <div className="mt-8 flex items-center gap-3">
         <Button 
           variant="pastel-green" 
-          className="flex-1"
+          className="flex-1 py-2 hover:bg-green-300"
           onClick={onShare}
         >
           <Share2 size={18} />
@@ -60,7 +60,7 @@ export function RoomCard({
         {isAdmin ? (
           <Button 
             variant="pastel-red" 
-            className="flex-1"
+            className="flex-1 py-2"
             onClick={onDelete}
           >
             <Trash2 size={18} />
@@ -69,7 +69,7 @@ export function RoomCard({
         ) : (
           <Button 
              variant="secondary"
-             className="flex-1"
+             className="flex-1 py-2"
              onClick={onLeave}
           >
             <LogOut size={18} />

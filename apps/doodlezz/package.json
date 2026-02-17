@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
+    "@repo/db": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.13.4",
     "dotenv": "^17.2.3",
