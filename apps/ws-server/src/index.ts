@@ -296,9 +296,114 @@ wss.on("connection", (ws, request) => {
       }
 
       // ====================================================================
-      // CHAT / UPDATE / STATE_SYNC / CLEAR_CANVAS
-      // (Same as before - add your existing handlers here)
+      // CHAT (Add new shape)
       // ====================================================================
+      if (parsedData.type === "chat") {
+        const { message, roomId } = parsedData.payload;
+        
+        await prisma.chat.create({
+          data: {
+            roomId: roomId,
+            message: message,
+            userId: userId,
+          },
+        });
+
+        broadcastToRoom(
+          roomId,
+          JSON.stringify({
+            type: "chat",
+            payload: { message, roomId },
+          }),
+          userId,
+        );
+        return;
+      }
+
+      // ====================================================================
+      // UPDATE (Modify existing shape properties)
+      // ====================================================================
+      if (parsedData.type === "update") {
+        const { shapeIndex, shape, roomId } = parsedData.payload;
+
+        // Find the chat at the specific index, ordered by ID.
+        // This matches the frontend's array index.
+        const chats = await prisma.chat.findMany({
+          where: { roomId: roomId },
+          orderBy: { id: "asc" },
+        });
+
+        if (chats[shapeIndex]) {
+          await prisma.chat.update({
+            where: { id: chats[shapeIndex].id },
+            data: { message: shape },
+          });
+        }
+
+        broadcastToRoom(
+          roomId,
+          JSON.stringify({
+            type: "update",
+            payload: { shapeIndex, shape, roomId },
+          }),
+          userId,
+        );
+        return;
+      }
+
+      // ====================================================================
+      // STATE_SYNC (Undo/Redo or Deletes)
+      // ====================================================================
+      if (parsedData.type === "state_sync") {
+        const { shapes, roomId } = parsedData.payload;
+
+        // Wipe and replace all shapes for this room
+        await prisma.chat.deleteMany({
+          where: { roomId: roomId },
+        });
+
+        const parsedShapes = JSON.parse(shapes);
+        if (parsedShapes.length > 0) {
+          await prisma.chat.createMany({
+            data: parsedShapes.map((s: any) => ({
+              roomId: roomId,
+              message: JSON.stringify(s),
+              userId: userId,
+            })),
+          });
+        }
+
+        broadcastToRoom(
+          roomId,
+          JSON.stringify({
+            type: "state_sync",
+            payload: { shapes, roomId },
+          }),
+          userId,
+        );
+        return;
+      }
+
+      // ====================================================================
+      // CLEAR_CANVAS
+      // ====================================================================
+      if (parsedData.type === "clear_canvas") {
+        const { roomId } = parsedData.payload;
+
+        await prisma.chat.deleteMany({
+          where: { roomId: roomId },
+        });
+
+        broadcastToRoom(
+          roomId,
+          JSON.stringify({
+            type: "clear_canvas",
+            payload: { roomId },
+          }),
+          userId,
+        );
+        return;
+      }
     } catch (error) {
       console.error("❌ Error parsing message:", error);
       ws.send(

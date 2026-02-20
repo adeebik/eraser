@@ -7,9 +7,12 @@ import ZoomControls from "./ZoomControls";
 import TopToolbar from "./TopToolbar";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
+import { useRouter } from "next/navigation";
 
 export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const router = useRouter();
+  const [initError, setInitError] = useState<string | null>(null);
   const [game, setGame] = useState<Game>();
   const [selectedTool, setSelectedTool] = useState<ShapeType>(ShapeType.PENCIL);
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -44,6 +47,8 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
   }, [strokeColor, strokeWidth, backgroundColor, fillStyle, game]);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     if (canvasRef.current) {
       const g = new Game(canvasRef.current, roomId, socket);
       
@@ -73,12 +78,22 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
       window.addEventListener('resize', handleResize);
       g.onStateChange(handleStateChange);
       
+      timeoutId = setTimeout(() => {
+        setInitError("Failed to initialize canvas after 10 seconds. Please try again.");
+      }, 10000);
+
       g.init().then(() => {
+        clearTimeout(timeoutId);
         setGame(g);
         handleStateChange();
+      }).catch((e) => {
+        clearTimeout(timeoutId);
+        setInitError("Failed to load canvas data.");
+        console.error("Canvas init error:", e);
       });
 
       return () => {
+        clearTimeout(timeoutId);
         window.removeEventListener('resize', handleResize);
         g.destroy();
       };
@@ -172,12 +187,17 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [game]);
 
-  if (!game) {
+  if (initError) {
     return (
       <div className="flex items-center justify-center h-screen bg-black">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-          <p className="text-white text-lg">Loading canvas...</p>
+          <p className="text-red-400 text-lg mb-4">{initError}</p>
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-gray-200"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -192,37 +212,50 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
         className="absolute inset-0"
       />
 
-      {/* Top Toolbar */}
-      <TopToolbar
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onClear={handleClearCanvas}
-      />
+      {!game && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white text-lg">Loading canvas...</p>
+          </div>
+        </div>
+      )}
 
-      {/* Left Tools Panel */}
-      <ToolsPanel selectedTool={selectedTool} onToolChange={setSelectedTool} />
+      {game && (
+        <>
+          {/* Top Toolbar */}
+          <TopToolbar
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onClear={handleClearCanvas}
+          />
 
-      {/* Bottom Style Panel */}
-      <BottomStylePanel
-        strokeColor={strokeColor}
-        strokeWidth={strokeWidth}
-        backgroundColor={backgroundColor}
-        fillStyle={fillStyle}
-        onStrokeColorChange={setStrokeColor}
-        onStrokeWidthChange={setStrokeWidth}
-        onBackgroundColorChange={setBackgroundColor}
-        onFillStyleChange={setFillStyle}
-      />
+          {/* Left Tools Panel */}
+          <ToolsPanel selectedTool={selectedTool} onToolChange={setSelectedTool} />
 
-      {/* Zoom Controls - Bottom Right */}
-      <ZoomControls
-        zoomLevel={zoomLevel}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetZoom={handleResetZoom}
-      />
+          {/* Bottom Style Panel */}
+          <BottomStylePanel
+            strokeColor={strokeColor}
+            strokeWidth={strokeWidth}
+            backgroundColor={backgroundColor}
+            fillStyle={fillStyle}
+            onStrokeColorChange={setStrokeColor}
+            onStrokeWidthChange={setStrokeWidth}
+            onBackgroundColorChange={setBackgroundColor}
+            onFillStyleChange={setFillStyle}
+          />
+
+          {/* Zoom Controls - Bottom Right */}
+          <ZoomControls
+            zoomLevel={zoomLevel}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
+          />
+        </>
+      )}
     </div>
   );
 }

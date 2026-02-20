@@ -201,25 +201,11 @@ export const getRoomId = async (req: Request, res: Response) => {
     const room = await prisma.room.findFirst({
       where: {
         slug: slug as string,
-      },
-      include: {
-        members: {
-          where: {
-            userId: userId,
-          },
-        },
-      },
+      }
     });
 
     if (!room) {
       return res.status(404).json({ roomId: null, msg: "Room not found" });
-    }
-
-    // Check if user is admin OR a member
-    const isMember = room.adminId === userId || room.members.length > 0;
-
-    if (!isMember) {
-      return res.status(403).json({ roomId: null, msg: "Access denied" });
     }
 
     return res.json({ roomId: room.id });

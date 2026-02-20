@@ -10,9 +10,10 @@ export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
   const router = useRouter();
 
   useEffect(() => {
-    const ws = new WebSocket(
-      `${WS_URL}?token=${localStorage.getItem("token")}`,
-    );
+    const token = localStorage.getItem("token");
+    const name = localStorage.getItem("name") || "Guest";
+    
+    const ws = new WebSocket(`${WS_URL}?token=${token}`);
 
     ws.onopen = () => {
       setSocket(ws);
@@ -20,7 +21,7 @@ export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
         JSON.stringify({
           type: "join",
           payload: {
-            name: "server-1",
+            name: name,
             roomId: roomId,
           },
         }),
@@ -41,7 +42,7 @@ export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
         ws.close();
       }
     };
-  }, [roomId]);
+  }, [roomId, router]);
 
   if (!socket) {
     return (

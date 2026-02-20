@@ -48,6 +48,9 @@ export default function Signin() {
           message: response.data.msg || "Account created successfully!",
         });
         localStorage.setItem("token", response.data.token);
+        if (response.data.name) {
+          localStorage.setItem("name", response.data.name);
+        }
         setTimeout(() => {
           router.push("/dashboard");
         }, 1500);

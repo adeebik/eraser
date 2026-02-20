@@ -525,9 +525,6 @@ export class Game {
   }
 
   async init() {
-    // Clear any local storage on refresh
-    localStorage.clear();
-
     this.existingShapes = await getExistingShapes(this.roomId);
     this.saveToHistory(); // Save initial state
     this.clearCanvas();
