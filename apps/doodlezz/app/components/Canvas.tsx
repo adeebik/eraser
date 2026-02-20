@@ -80,7 +80,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
       
       timeoutId = setTimeout(() => {
         setInitError("Failed to initialize canvas after 10 seconds. Please try again.");
-      }, 10000);
+      }, 30000);
 
       g.init().then(() => {
         clearTimeout(timeoutId);
@@ -192,12 +192,20 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
       <div className="flex items-center justify-center h-screen bg-black">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-4">{initError}</p>
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-gray-200"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Refresh
+            </button>
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );

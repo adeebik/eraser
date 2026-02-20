@@ -539,7 +539,7 @@ export class Game {
       this.isRemoteUpdate = true;
 
       if (receivedMsg.type === "chat") {
-        const parsedShape = JSON.parse(receivedMsg.payload.text);
+        const parsedShape = JSON.parse(receivedMsg.payload.message);
         this.existingShapes.push(parsedShape);
         this.clearCanvas();
       } else if (receivedMsg.type === "update") {

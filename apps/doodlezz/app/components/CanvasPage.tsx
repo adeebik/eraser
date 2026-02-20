@@ -11,7 +11,6 @@ export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const name = localStorage.getItem("name") || "Guest";
     
     const ws = new WebSocket(`${WS_URL}?token=${token}`);
 
@@ -21,7 +20,6 @@ export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
         JSON.stringify({
           type: "join",
           payload: {
-            name: name,
             roomId: roomId,
           },
         }),

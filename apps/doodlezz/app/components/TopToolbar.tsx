@@ -1,4 +1,5 @@
 import { Undo2, Redo2, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface TopToolbarProps {
   canUndo: boolean;
@@ -15,6 +16,8 @@ export default function TopToolbar({
   onRedo,
   onClear,
 }: TopToolbarProps) {
+  const router = useRouter();
+
   return (
     <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
       <div className="flex items-center justify-between px-4 py-3">
@@ -63,9 +66,12 @@ export default function TopToolbar({
 
         {/* Center - App Name */}
         <div className="pointer-events-auto">
-          <div className="bg-zinc-900/95 backdrop-blur-sm rounded-lg px-4 py-2 border border-zinc-700/50 shadow-xl">
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="bg-zinc-900/95 backdrop-blur-sm rounded-lg px-4 py-2 border border-zinc-700/50 shadow-xl hover:bg-zinc-800 transition-colors"
+          >
             <h1 className="text-white font-semibold text-sm">Doodlzz</h1>
-          </div>
+          </button>
         </div>
 
       
