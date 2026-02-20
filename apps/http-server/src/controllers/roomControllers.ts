@@ -125,7 +125,7 @@ export const leaveRoom = async (req: Request, res: Response) => {
   const userId = req.userId;
 
   if (!userId || !roomId) {
-    return;
+    return res.json({ msg: "Invalid data" });
   }
 
   console.log(userId, roomId);

@@ -15,7 +15,7 @@ interface RoomCardProps {
   onDelete?: (id: string) => void;
   onLeave?: (id: string) => void;
   onJoin?: () => void;
-  alert : AlertData | null;
+  alert: AlertData | null;
   setAlert: (alert: AlertData | null) => void;
 }
 
@@ -29,7 +29,7 @@ export function RoomCard({
   onDelete,
   onLeave,
   alert,
-  setAlert
+  setAlert,
 }: RoomCardProps) {
   return (
     <div className="group relative flex flex-col justify-between rounded-xl border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
@@ -58,18 +58,20 @@ export function RoomCard({
         </div>
       </div>
 
-      {alert && alert.context === "room" && (!alert.roomId || alert.roomId === id) && (
-        <div className="mb-6">
-          <Alert
-            type={alert.type}
-            title={alert.title}
-            message={alert.message}
-            onClose={() => setAlert(null)}
-            onConfirm={alert.onConfirm}
-            onCancel={alert.onCancel}
-          />
-        </div>
-      )}
+      {alert &&
+        alert.context === "room" &&
+        (!alert.roomId || alert.roomId === id) && (
+          <div className="mb-6">
+            <Alert
+              type={alert.type}
+              title={alert.title}
+              message={alert.message}
+              onClose={() => setAlert(null)}
+              onConfirm={alert.onConfirm}
+              onCancel={alert.onCancel}
+            />
+          </div>
+        )}
 
       <div className="mt-8 flex items-center gap-4">
         <Button
@@ -91,7 +93,11 @@ export function RoomCard({
             Delete
           </Button>
         ) : (
-          <Button variant="secondary" className="flex-1 py-2" onClick={()=>onLeave?.(id)}>
+          <Button
+            variant="secondary"
+            className="flex-1 py-2"
+            onClick={() => onLeave?.(id)}
+          >
             <LogOut size={18} />
             Leave
           </Button>
