@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { WS_URL } from "@/config/config";
 import { Canvas } from "./Canvas";
+import { useRouter } from "next/navigation";
 
-export function CanvasPage({ roomId }: { roomId: string }) {
+export function CanvasPage({ roomId, slug }: { roomId: string; slug: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const ws = new WebSocket(
-      `${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI0YjFjNjBkLTY3YmUtNDY4NC04YWZkLTVjZTJlMjY0MGNiOCIsImlhdCI6MTc2OTk3OTI1OH0.0CMwV8ybdQbX453Jg4wRtrgVBi3qSlD3YlP8i1wyIpA`,
-    );
+    const token = localStorage.getItem("token");
+    
+    const ws = new WebSocket(`${WS_URL}?token=${token}`);
 
     ws.onopen = () => {
       setSocket(ws);
@@ -18,17 +20,19 @@ export function CanvasPage({ roomId }: { roomId: string }) {
         JSON.stringify({
           type: "join",
           payload: {
-            name: "server-1",
             roomId: roomId,
           },
         }),
       );
     };
+
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      router.push("/dashboard");
     };
     ws.onclose = () => {
       console.log("WebSocket connection closed");
+      router.push("/dashboard");
     };
 
     return () => {
@@ -36,17 +40,17 @@ export function CanvasPage({ roomId }: { roomId: string }) {
         ws.close();
       }
     };
-  }, [roomId]);
+  }, [roomId, router]);
 
   if (!socket) {
     return (
-       <div className="flex items-center justify-center h-screen bg-black">
+      <div className="flex items-center justify-center h-screen bg-black">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
           <p className="text-white text-lg">Connecting to server...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (

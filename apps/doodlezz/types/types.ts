@@ -41,3 +41,10 @@ export type Shape = {
   erasePoints: Array<{x: number; y: number}>;
   rotation?: number;
 }
+
+export type CursorData = {
+  userId: string;
+  name: string;
+  x: number;
+  y: number;
+};

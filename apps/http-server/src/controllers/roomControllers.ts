@@ -30,13 +30,13 @@ export const createRoom = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
-      msg:"Room Created Successfully",
+      msg: "Room Created Successfully",
       roomId: room.id,
       name: room.slug,
     });
   } catch (error) {
     res.status(402).json({
-      err:"duplicateEntry",
+      err: "duplicateEntry",
       msg: "Room already Exists",
     });
     console.log("Error creating room:", error);
@@ -190,5 +190,27 @@ export const allRooms = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.json({ message: "Error getting rooms" });
+  }
+};
+
+export const getRoomId = async (req: Request, res: Response) => {
+  const slug = req.params.slug;
+  const userId = req.userId;
+
+  try {
+    const room = await prisma.room.findFirst({
+      where: {
+        slug: slug as string,
+      }
+    });
+
+    if (!room) {
+      return res.status(404).json({ roomId: null, msg: "Room not found" });
+    }
+
+    return res.json({ roomId: room.id });
+  } catch (error) {
+    console.error("Error in getRoomId:", error);
+    res.status(500).json({ roomId: null, msg: "Internal server error" });
   }
 };

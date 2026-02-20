@@ -3,7 +3,12 @@ import axios from "axios";
 
 export async function getExistingShapes(roomId: string) {
   try {
-    const res = await axios.get(`${BE_URL}/chats/${roomId}`);
+    const token = localStorage.getItem("token");
+    const res = await axios.get(`${BE_URL}/content/chats/${roomId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     const data = res.data.response;
     console.log(data);
 
