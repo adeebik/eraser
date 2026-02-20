@@ -325,6 +325,10 @@ export default function DashboardPage() {
     }
   };
 
+  const handleRoute = (slug: string) => {
+    router.push(`/canvas/${slug}`);
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f9f7f2]">
@@ -410,6 +414,7 @@ export default function DashboardPage() {
                 alert={alert}
                 setAlert={setAlert}
                 onShare={handleShare}
+                handleRoute={handleRoute}
               />
             ))}
 

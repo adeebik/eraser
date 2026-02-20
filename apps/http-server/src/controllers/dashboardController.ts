@@ -9,7 +9,7 @@ export const landing = async (req: Request, res: Response) => {
       where: {
         id: userId,
       },
-      select:{
+      select: {
         id: true,
         email: true,
         name: true,
@@ -33,7 +33,7 @@ export const landing = async (req: Request, res: Response) => {
             },
           },
           orderBy: {
-            joinedAt: 'desc',
+            joinedAt: "desc",
           },
         },
       },
@@ -41,7 +41,7 @@ export const landing = async (req: Request, res: Response) => {
 
     if (!userInfo) {
       return res.status(404).json({
-        msg:"Please signup first"
+        msg: "Please signup first",
       });
     }
 
@@ -67,12 +67,12 @@ export const landing = async (req: Request, res: Response) => {
     };
 
     res.status(200).json({
-        msg: "welcome to dashboard",
-        dashboardData
-    })
+      msg: "welcome to dashboard",
+      dashboardData,
+    });
   } catch (error) {
     res.status(411).json({
-      msg:"invalid"
-    })
+      msg: "invalid",
+    });
   }
 };

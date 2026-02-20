@@ -185,9 +185,9 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black">
-      <canvas 
-        ref={canvasRef} 
-        width={window.innerWidth} 
+      <canvas
+        ref={canvasRef}
+        width={window.innerWidth}
         height={window.innerHeight}
         className="absolute inset-0"
       />
@@ -202,10 +202,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
       />
 
       {/* Left Tools Panel */}
-      <ToolsPanel
-        selectedTool={selectedTool}
-        onToolChange={setSelectedTool}
-      />
+      <ToolsPanel selectedTool={selectedTool} onToolChange={setSelectedTool} />
 
       {/* Bottom Style Panel */}
       <BottomStylePanel
