@@ -1,4 +1,4 @@
-import { Shape, ShapeStyle, ShapeType } from "@/types/types";
+import { Shape, ShapeStyle, ShapeType, CursorData } from "@/types/types";
 import { getExistingShapes } from "./http";
 
 export class Game {
@@ -54,6 +54,11 @@ export class Game {
 
   // Event listeners for state changes
   private stateChangeListeners: (() => void)[] = [];
+
+  // Real-time Collaborative Cursors
+  private cursors: Map<string, CursorData> = new Map();
+  private cursorListeners: ((cursors: Map<string, CursorData>) => void)[] = [];
+  private lastCursorSend: number = 0;
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -563,6 +568,18 @@ export class Game {
         this.selectedShapeIndex = null;
         this.selectedShapeIndices.clear();
         this.clearCanvas();
+      } else if (receivedMsg.type === "cursor") {
+        // Handle incoming cursor movements
+        const { userId, name, x, y } = receivedMsg.payload;
+        this.cursors.set(userId, { userId, name, x, y });
+        this.notifyCursorChange();
+      } else if (receivedMsg.type === "user-left" || receivedMsg.type === "user-offline") {
+        // Remove cursor when user leaves
+        const { userId } = receivedMsg.payload;
+        if (this.cursors.has(userId)) {
+          this.cursors.delete(userId);
+          this.notifyCursorChange();
+        }
       }
 
       // Reset remote update flag
@@ -719,7 +736,7 @@ export class Game {
         this.ctx.globalCompositeOperation = "destination-out";
         this.ctx.fillStyle = "white";
 
-        s.erasePoints.forEach((point) => {
+        s.erasePoints.forEach((point: { x: number; y: number }) => {
           this.ctx.beginPath();
           this.ctx.arc(point.x, point.y, 8 / this.scale, 0, Math.PI * 2);
           this.ctx.fill();
@@ -1632,7 +1649,44 @@ export class Game {
     this.currentPath = [];
   };
 
+  // Subscribe to cursor changes
+  public onCursorChange(callback: (cursors: Map<string, CursorData>) => void) {
+    this.cursorListeners.push(callback);
+  }
+
+  private notifyCursorChange() {
+    this.cursorListeners.forEach((callback) => callback(new Map(this.cursors)));
+  }
+
+  // Convert canvas coordinates to absolute screen pixels for the React Overlay
+  public canvasToScreen(canvasX: number, canvasY: number): { x: number; y: number } {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = canvasX * this.scale + this.offsetX + rect.left;
+    const y = canvasY * this.scale + this.offsetY + rect.top;
+    return { x, y };
+  }
+
   mouseMoveHandler = (e: MouseEvent) => {
+    const pointerCoords = this.screenToCanvas(e.clientX, e.clientY);
+
+    // Throttle cursor broadcast (limit to ~30 calls per second)
+    const now = Date.now();
+    if (now - this.lastCursorSend > 30) {
+      if (this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send(
+          JSON.stringify({
+            type: "cursor",
+            payload: {
+              roomId: this.roomId,
+              x: pointerCoords.x,
+              y: pointerCoords.y,
+            },
+          }),
+        );
+      }
+      this.lastCursorSend = now;
+    }
+
     if (this.isPanning) {
       this.offsetX = e.clientX - this.panStartX;
       this.offsetY = e.clientY - this.panStartY;

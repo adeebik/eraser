@@ -8,6 +8,7 @@ import TopToolbar from "./TopToolbar";
 import { ShapeType } from "@/types/types";
 import { Game } from "../draw/Game";
 import { useRouter } from "next/navigation";
+import CursorOverlay from "./CursorOverlay";
 
 export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -213,6 +214,7 @@ export function Canvas({ roomId, socket }: { roomId: string, socket: WebSocket }
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black">
+      {game && <CursorOverlay game={game} />}
       <canvas
         ref={canvasRef}
         width={window.innerWidth}

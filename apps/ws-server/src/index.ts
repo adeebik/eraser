@@ -404,6 +404,34 @@ wss.on("connection", (ws, request) => {
         );
         return;
       }
+
+      // ====================================================================
+      // CURSOR (Real-time mouse movements)
+      // ====================================================================
+      if (parsedData.type === "cursor") {
+        const { roomId, x, y } = parsedData.payload;
+
+        const roomInfo = rooms.get(roomId);
+        if (!roomInfo) return;
+
+        const member = roomInfo.members.get(userId);
+        if (!member) return;
+
+        broadcastToRoom(
+          roomId,
+          JSON.stringify({
+            type: "cursor",
+            payload: {
+              userId,
+              name: member.name,
+              x,
+              y,
+            },
+          }),
+          userId, // important: exclude the sender so they don't see their own network cursor
+        );
+        return;
+      }
     } catch (error) {
       console.error("❌ Error parsing message:", error);
       ws.send(
