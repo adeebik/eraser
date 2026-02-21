@@ -71,8 +71,8 @@ export const landing = async (req: Request, res: Response) => {
       dashboardData,
     });
   } catch (error) {
-    res.status(411).json({
-      msg: "invalid",
+    res.status(500).json({
+      msg: "Unexpected error",
     });
   }
 };

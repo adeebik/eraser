@@ -1,135 +1,94 @@
-# Turborepo starter
+# Doodlezz
 
-This Turborepo starter is maintained by the Turborepo core team.
+Doodlezz is a collaborative, real-time drawing and whiteboard application built on a modern, high-performance monorepo architecture.
 
-## Using this example
+## Overview
 
-Run the following command:
+This project is structured as a [Turborepo](https://turbo.build/) monorepo to seamlessly manage multiple applications and shared packages. It leverages the power of Next.js for the frontend, Express for RESTful APIs, WebSockets for near-instant real-time canvas synchronization, and Prisma with PostgreSQL for robust data persistence.
+
+## Architecture
+
+The Turborepo consists of the following structure:
+
+### Apps
+
+- **`apps/doodlezz`**: The primary collaborative drawing frontend, built with Next.js 16 and Tailwind CSS v4. It manages the interactive canvas, tools, and UI.
+- **`apps/web`**: A secondary/landing Next.js application.
+- **`apps/http-server`**: The core REST API backend built with Express.js. Handles user authentication (JWT), room creation, and data retrieval (Prisma).
+- **`apps/ws-server`**: A dedicated Node.js WebSocket server responsible for broadcasting real-time drawing events globally to connected clients in a specific room.
+
+### Shared Packages (in `packages/`)
+
+- **`@repo/ui`**: A shared React component library for uniform UI elements.
+- **`@repo/db`**: The centralized Prisma ORM client and database schema.
+- **`@repo/common`**: Shared Zod validation schemas for API inputs.
+- Configs: `@repo/eslint-config`, `@repo/typescript-config`, and `@repo/backend-config`.
+
+## Getting Started
+
+### Prerequisites
+
+Ensure you have the following installed:
+
+- Node.js (v18+)
+- [pnpm](https://pnpm.io/) (v10.x recommended)
+- PostgreSQL database (running locally or via a cloud provider)
+
+### Installation
+
+1. Clone the repository and navigate to the project directory:
+
+   ```sh
+   git clone <repository-url>
+   cd eraser
+   ```
+
+2. Install all dependencies:
+
+   ```sh
+   pnpm install
+   ```
+
+3. Set up environment variables:
+   - Create a `.env` file in the root based on `.env.example`.
+   - Ensure the `DATABASE_URL` is pointing to your Postgres instance.
+   - Configure JWT secrets in the backend config.
+
+4. Initialize the Database:
+   Sync the Prisma schema with your database and generate the client.
+   ```sh
+   pnpm db:push
+   # OR
+   pnpm db:migrate:dev
+   ```
+
+### Running the Application
+
+To start the entire stack (frontends, HTTP server, and WebSocket server) in development mode, simply run:
 
 ```sh
-npx create-turbo@latest
+pnpm dev
 ```
 
-## What's inside?
+Turborepo will effortlessly orchestrate starting all applications simultaneously inside the monorepo.
 
-This Turborepo includes the following packages/apps:
+To build the application for production:
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```sh
+pnpm run build
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Useful Commands
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+- `pnpm format`: Formats code using Prettier.
+- `pnpm lint`: Runs ESLint across all apps and packages.
+- `pnpm check-types`: Runs TypeScript type checking.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Built With
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- [Turborepo](https://turbo.build/repo/docs)
+- [Next.js](https://nextjs.org/)
+- [Express.js](https://expressjs.com/)
+- [ws (WebSockets)](https://github.com/websockets/ws)
+- [Prisma ORM](https://www.prisma.io/)
+- [Tailwind CSS](https://tailwindcss.com/)

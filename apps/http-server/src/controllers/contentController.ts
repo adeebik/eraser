@@ -51,7 +51,7 @@ export const getChats = async (req: Request, res: Response) => {
       };
     });
 
-    res.json({
+    res.status(200).json({
       response,
     });
   } catch (error) {

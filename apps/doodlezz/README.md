@@ -5,6 +5,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 ## Features
 
 ### 🎨 **Drawing Tools**
+
 - **Select Tool** (V) - Select, move, resize, and rotate shapes
 - **Pencil** (P) - Freehand drawing
 - **Circle** (O) - Draw circles/ellipses
@@ -12,6 +13,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 - **Eraser** (E) - Erase content
 
 ### 🎯 **Shape Manipulation**
+
 - **Move** - Drag shapes to reposition
 - **Resize** - 8 resize handles (corners + edges)
 - **Rotate** - Green handle above shape for rotation
@@ -19,6 +21,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 - **Duplicate** - Ctrl/Cmd+D to duplicate selected shapes
 
 ### 🎨 **Styling**
+
 - **Stroke Color** - Choose from 13 colors
 - **Stroke Width** - 5 thickness options (1px - 8px)
 - **Fill Style** - None, Solid, Hatch pattern, Dots pattern
@@ -26,12 +29,14 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 - **Opacity** - 25% opacity for fills
 
 ### 🔍 **Canvas Navigation**
+
 - **Zoom** - Ctrl+Mouse Wheel (10% - 1000%)
 - **Pan** - Shift+Drag or Middle Mouse Button
 - **Scroll** - Mouse Wheel (vertical), Shift+Wheel (horizontal)
 - **Infinite Grid** - Visual guide for positioning
 
 ### 💾 **History & Collaboration**
+
 - **Undo** - Ctrl+Z (50 action history)
 - **Redo** - Ctrl+Shift+Z
 - **Real-time Sync** - All changes broadcast to collaborators
@@ -40,6 +45,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 ## Keyboard Shortcuts
 
 ### Tools
+
 - `V` or `1` - Select Tool
 - `P` or `2` - Pencil
 - `O` or `3` - Circle
@@ -47,6 +53,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 - `E` or `5` - Eraser
 
 ### Actions
+
 - `Ctrl+Z` - Undo
 - `Ctrl+Shift+Z` or `Ctrl+Y` - Redo
 - `Ctrl+D` - Duplicate selected shape
@@ -54,6 +61,7 @@ A feature-rich, real-time collaborative drawing canvas built with React, TypeScr
 - `Ctrl+Click` - Multi-select shapes
 
 ### Navigation
+
 - `Mouse Wheel` - Scroll vertically
 - `Shift+Wheel` - Scroll horizontally
 - `Ctrl+Wheel` - Zoom in/out
@@ -75,6 +83,7 @@ CanvasPage.tsx          # WebSocket connection & room management
 ## Technical Details
 
 ### Shape Types
+
 ```typescript
 - RECT: Rectangle with x, y, width, height
 - CIRCLE: Ellipse with x, y, width, height
@@ -84,6 +93,7 @@ CanvasPage.tsx          # WebSocket connection & room management
 ```
 
 ### Shape Properties
+
 ```typescript
 - rotation: Angle in radians
 - style: {
@@ -96,6 +106,7 @@ CanvasPage.tsx          # WebSocket connection & room management
 ```
 
 ### WebSocket Events
+
 ```typescript
 // New shape created
 { type: "chat", payload: { message: JSON.stringify(shape), roomId } }
@@ -113,17 +124,20 @@ CanvasPage.tsx          # WebSocket connection & room management
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Configure environment variables:
+
 ```env
 NEXT_PUBLIC_WS_URL=ws://your-websocket-server
 NEXT_PUBLIC_BE_URL=https://your-backend-api
 ```
 
 3. Run development server:
+
 ```bash
 npm run dev
 ```
@@ -182,16 +196,19 @@ npm run dev
 ## Troubleshooting
 
 ### Canvas not loading
+
 - Check WebSocket connection in dev tools
 - Verify `WS_URL` is correct
 - Ensure backend server is running
 
 ### Shapes not syncing
+
 - Check network tab for WebSocket messages
 - Verify roomId is consistent
 - Check for console errors
 
 ### Performance issues
+
 - Reduce number of shapes
 - Lower zoom level
 - Clear canvas periodically
