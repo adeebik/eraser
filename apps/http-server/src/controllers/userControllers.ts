@@ -9,7 +9,7 @@ export const signinController = async (req: Request, res: Response) => {
   const parseData = singin.safeParse(req.body);
 
   if (!parseData.success) {
-    return res.status(403).json({
+    return res.status(400).json({
       msg: "Input fields invalid",
       error: parseData.error,
     });
@@ -25,7 +25,7 @@ export const signinController = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(403).json({
+      return res.status(401).json({
         msg: "Invalid inputs",
       });
     }
@@ -33,7 +33,7 @@ export const signinController = async (req: Request, res: Response) => {
     const checkPassword = await bcrypt.compare(password, user.password);
 
     if (!checkPassword) {
-      return res.status(403).json({
+      return res.status(401).json({
         msg: "Invalid inputs",
       });
     }
@@ -55,8 +55,8 @@ export const signinController = async (req: Request, res: Response) => {
       name: user.name,
     });
   } catch (error) {
-    res.status(403).json({
-      msg: "Unauthorized",
+    res.status(500).json({
+      msg: "Unexpected server error",
       error: error,
     });
   }
@@ -66,7 +66,7 @@ export const signupController = async (req: Request, res: Response) => {
   const parseData = signup.safeParse(req.body);
 
   if (!parseData.success) {
-    return res.status(403).json({
+    return res.status(400).json({
       msg: "Input fields invalid",
       error: parseData.error,
     });
@@ -91,13 +91,14 @@ export const signupController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (
-      error.meta.driverAdapterError.cause.kind == "UniqueConstraintViolation"
+      error.meta?.driverAdapterError?.cause?.kind == "UniqueConstraintViolation" || 
+      error.code == "P2002"
     ) {
-      res.status(411).json({
+      res.status(409).json({
         msg: "User already exists",
       });
     } else {
-      res.status(403).json({
+      res.status(500).json({
         msg: "Unexpected Database Error",
       });
     }

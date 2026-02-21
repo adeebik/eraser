@@ -7,7 +7,7 @@ import generateShareLink from "../utils/linkGenerator";
 export const createRoom = async (req: Request, res: Response) => {
   const parseData = roomSchema.safeParse(req.body);
   if (!parseData.success) {
-    return res.json({
+    return res.status(400).json({
       msg: "Incorrect Format",
     });
   }
@@ -35,11 +35,11 @@ export const createRoom = async (req: Request, res: Response) => {
       name: room.slug,
     });
   } catch (error) {
-    res.status(402).json({
+    console.log("Error creating room:", error);
+    res.status(409).json({
       err: "duplicateEntry",
       msg: "Room already Exists",
     });
-    console.log("Error creating room:", error);
   }
 };
 
@@ -48,8 +48,7 @@ export const shareRoom = async (req: Request, res: Response) => {
   const userId = req.userId;
 
   if (!enableShare || !roomId) {
-    //
-    return;
+    return res.status(400).json({ msg: "Missing data" });
   }
 
   try {
@@ -67,11 +66,11 @@ export const shareRoom = async (req: Request, res: Response) => {
       });
     }
 
-    res.json({
+    res.status(200).json({
       sharedLink: shareLink,
     });
   } catch (error) {
-    res.status(411).json({ msg: "Unexpected Problem Occurred" });
+    res.status(500).json({ msg: "Unexpected Problem Occurred" });
   }
 };
 
@@ -100,7 +99,7 @@ export const joinRoom = async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      return res.status(404).json({ msg: "Already joined" });
+      return res.status(409).json({ msg: "Already joined" });
     }
 
     await prisma.members.create({
@@ -114,8 +113,8 @@ export const joinRoom = async (req: Request, res: Response) => {
       msg: "Joined room successfully",
     });
   } catch (error) {
-    res.json({
-      msg: "Error",
+    res.status(500).json({
+      msg: "Error joining room",
     });
   }
 };
@@ -125,7 +124,7 @@ export const leaveRoom = async (req: Request, res: Response) => {
   const userId = req.userId;
 
   if (!userId || !roomId) {
-    return res.json({ msg: "Invalid data" });
+    return res.status(400).json({ msg: "Invalid data" });
   }
 
   console.log(userId, roomId);
@@ -140,11 +139,11 @@ export const leaveRoom = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ msg: "Left room successfully" });
+    res.status(200).json({ msg: "Left room successfully" });
   } catch (error) {
     console.log(error);
 
-    res.json({ message: "Error leaving room" });
+    res.status(500).json({ message: "Error leaving room" });
   }
 };
 
@@ -153,7 +152,7 @@ export const deleteRoom = async (req: Request, res: Response) => {
   const userId = req.userId;
 
   if (!userId || !roomId) {
-    return;
+    return res.status(400).json({ msg: "Invalid data" });
   }
 
   try {
@@ -164,11 +163,11 @@ export const deleteRoom = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ msg: "Room deleted successfully" });
+    res.status(200).json({ msg: "Room deleted successfully" });
   } catch (error) {
     console.log(error);
 
-    res.json({ message: "Error deleting room" });
+    res.status(500).json({ message: "Error deleting room" });
   }
 };
 
@@ -185,11 +184,11 @@ export const allRooms = async (req: Request, res: Response) => {
         rooms: true,
       },
     });
-    res.json({
+    res.status(200).json({
       allRooms,
     });
   } catch (error) {
-    res.json({ message: "Error getting rooms" });
+    res.status(500).json({ message: "Error getting rooms" });
   }
 };
 
