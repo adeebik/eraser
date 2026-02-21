@@ -50,56 +50,56 @@ model Chat {
   message     String
   userId      String
   createdAt   DateTime  @default(now())
-  shape       Shape?
+  // shape       Shape?
 
   room        Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Shape {
-  id              Int        @id @default(autoincrement())
-  chatId          Int        @unique
-  type            String
+// model Shape {
+//   id              Int        @id @default(autoincrement())
+//   chatId          Int        @unique
+//   type            String
 
-  x               Float?
-  y               Float?
-  height          Float?
-  width           Float?
-  rotation        Float?     @default(0)
+//   x               Float?
+//   y               Float?
+//   height          Float?
+//   width           Float?
+//   rotation        Float?     @default(0)
 
-  centerX         Float?
-  centerY         Float?
+//   centerX         Float?
+//   centerY         Float?
   
-  strokeColor     String     @default("#ffffff")
-  strokeWidth     Int        @default(2)
-  backgroundColor String     @default("transparent")
-  fillStyle       String     @default("NONE")
+//   strokeColor     String     @default("#ffffff")
+//   strokeWidth     Int        @default(2)
+//   backgroundColor String     @default("transparent")
+//   fillStyle       String     @default("NONE")
 
-  chat            Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+//   chat            Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
 
-  pathPoints      PathPoint[]
-  erasePoints     ErasePoint[]
+//   pathPoints      PathPoint[]
+//   erasePoints     ErasePoint[]
 
-}
+// }
 
-model PathPoint {
-  id        Int   @id @default(autoincrement())
-  shapeId   Int
-  x         Float
-  y         Float
-  order     Int
+// model PathPoint {
+//   id        Int   @id @default(autoincrement())
+//   shapeId   Int
+//   x         Float
+//   y         Float
+//   order     Int
 
-  shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
+//   shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
 
-}
+// }
 
-model ErasePoint {
-  id        Int   @id @default(autoincrement())
-  shapeId   Int
-  x         Float
-  y         Float
-  order     Int
+// model ErasePoint {
+//   id        Int   @id @default(autoincrement())
+//   shapeId   Int
+//   x         Float
+//   y         Float
+//   order     Int
 
-  shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
+//   shape     Shape @relation(fields: [shapeId], references: [id], onDelete: Cascade)
 
-}
+// }
