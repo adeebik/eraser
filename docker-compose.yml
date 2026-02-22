@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: eraser-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: eraser
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.be
+    container_name: eraser-backend
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/eraser?schema=public
+      # Add other necessary env vars below
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ws:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ws
+    container_name: eraser-ws
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/eraser?schema=public
+      # Add other necessary env vars below
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.fe
+    container_name: eraser-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080
+    depends_on:
+      - backend
+      - ws
+
+volumes:
+  postgres_data:
